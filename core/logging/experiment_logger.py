@@ -1,43 +1,71 @@
-"""Core logging helpers for reproducible experiment artifacts."""
-
-from __future__ import annotations
-
+import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 
-def _build_file_logger(logger_name: str, file_path: Path, formatter: logging.Formatter) -> logging.Logger:
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.INFO)
-    logger.propagate = False
 
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-        handler.close()
+class StageExperimentLogger:
+    """Persists stage-level experiment artifacts to a local directory."""
 
-    file_handler = logging.FileHandler(file_path, mode="w", encoding="utf-8")
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    return logger
+    def __init__(self, experiment_dir: str, config: dict[str, Any], stage_name: str) -> None:
+        self.stage_name = stage_name
+        self.experiment_dir = Path(experiment_dir)
+        self.experiment_dir.mkdir(parents=True, exist_ok=True)
 
+        self.config_path = self.experiment_dir / "config.json"
+        self.log_path = self.experiment_dir / "train.log"
+        self.metrics_path = self.experiment_dir / "metrics.jsonl"
+        self.model_path = self.experiment_dir / "model.pt"
 
-def build_experiment_logger(experiment_dir: Path) -> logging.Logger:
-    """Build logger writing human-readable experiment logs to train.log."""
+        self._write_config(config)
+        self._setup_logger()
+        self._ensure_model_artifact()
 
-    formatter = logging.Formatter("%(message)s")
-    return _build_file_logger(
-        logger_name=f"federated_training.train.{experiment_dir}",
-        file_path=experiment_dir / "train.log",
-        formatter=formatter,
-    )
+    def _write_config(self, config: dict[str, Any]) -> None:
+        with self.config_path.open("w", encoding="utf-8") as config_file:
+            json.dump(config, config_file, indent=2, ensure_ascii=False)
 
+    def _setup_logger(self) -> None:
+        logger_name = f"stage.{self.stage_name}.{self.experiment_dir.name}"
+        self.logger = logging.getLogger(logger_name)
+        self.logger.setLevel(logging.INFO)
+        self.logger.handlers = []
 
-def build_metrics_logger(experiment_dir: Path) -> logging.Logger:
-    """Build logger writing JSONL metrics lines to metrics.jsonl."""
+        file_handler = logging.FileHandler(self.log_path, encoding="utf-8")
+        file_handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
+        self.logger.addHandler(file_handler)
+        self.logger.propagate = False
 
-    formatter = logging.Formatter("%(message)s")
-    return _build_file_logger(
-        logger_name=f"federated_training.metrics.{experiment_dir}",
-        file_path=experiment_dir / "metrics.jsonl",
-        formatter=formatter,
-    )
+    def _ensure_model_artifact(self) -> None:
+        self.model_path.touch(exist_ok=True)
+
+    def debug(self, message: str) -> None:
+        self.logger.debug(message)
+
+    def info(self, message: str) -> None:
+        self.logger.info(message)
+
+    def warning(self, message: str) -> None:
+        self.logger.warning(message)
+
+    def error(self, message: str) -> None:
+        self.logger.error(message)
+
+    def exception(self, message: str) -> None:
+        self.logger.exception(message)
+
+    def critical(self, message: str) -> None:
+        self.logger.critical(message)
+
+    def write_metrics(self, step: str, values: dict[str, Any]) -> None:
+        record = {
+            "step": step,
+            "stage": self.stage_name,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            **values,
+        }
+        with self.metrics_path.open("a", encoding="utf-8") as metrics_file:
+            metrics_file.write(f"{json.dumps(record, ensure_ascii=False)}\n")
+
