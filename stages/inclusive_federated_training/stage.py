@@ -10,7 +10,7 @@ from domain.dataset.dataset_loader import InstitutionDataset, load_institution_d
 from domain.federated.fedavg import InstitutionUpdate, run_federated_round
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
-from domain.models.basic_model import LogisticRegressionModel
+from domain.models.model_registry import MODEL_REGISTRY
 from domain.training.trainer import TrainingConfig
 from stages.inclusive_federated_training.config import InclusiveFederatedTrainingConfig
 
@@ -53,19 +53,7 @@ class InclusiveFederatedTrainingStage:
         return experiment_dir
 
     def _build_model_factory(self):
-        if self.config.model_type == "tabnet":
-            from domain.models.tabnet_model import TabNetModel
-
-            return lambda n_features: TabNetModel.initialize(
-                n_features=n_features,
-                decision_dim=self.config.tabnet_decision_dim,
-                attention_dim=self.config.tabnet_attention_dim,
-                n_steps=self.config.tabnet_steps,
-                relaxation_factor=self.config.tabnet_relaxation_factor,
-                sparsity_weight=self.config.tabnet_sparsity_weight,
-                device=self.config.tabnet_device,
-            )
-        return lambda n_features: LogisticRegressionModel.initialize(n_features)
+        return MODEL_REGISTRY.get_factory(self.config.model_type, self.config.to_dict())
 
     def _load_datasets(self) -> list[InstitutionDataset]:
         return [

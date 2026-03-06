@@ -18,7 +18,7 @@ Use `configs/inclusive_federated.toml`:
 - `local_epochs`
 - `learning_rate`
 - `proximal_mu`
-- `model_type` (`logistic_regression` or `tabnet`)
+- `model_type` (must match a registered model in `domain/models/model_registry.py`)
 - TabNet options (used when `model_type = "tabnet"`):
   - `tabnet_decision_dim`
   - `tabnet_attention_dim`

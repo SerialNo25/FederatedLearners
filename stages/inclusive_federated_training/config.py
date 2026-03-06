@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from domain.models.model_registry import MODEL_REGISTRY
+
 
 @dataclass(frozen=True)
 class InstitutionConfig:
@@ -69,8 +71,11 @@ class InclusiveFederatedTrainingConfig:
             raise ValueError("learning_rate must be > 0")
         if self.proximal_mu < 0:
             raise ValueError("proximal_mu must be >= 0")
-        if self.model_type not in {"logistic_regression", "tabnet"}:
-            raise ValueError("model_type must be either 'logistic_regression' or 'tabnet'")
+        if not MODEL_REGISTRY.has(self.model_type):
+            valid_model_types = ", ".join(MODEL_REGISTRY.list_model_types())
+            raise ValueError(
+                f"model_type must be one of: {valid_model_types}"
+            )
         if self.tabnet_steps < 1:
             raise ValueError("tabnet_steps must be >= 1")
 
