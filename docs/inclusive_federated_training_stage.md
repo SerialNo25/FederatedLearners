@@ -1,13 +1,21 @@
 # Inclusive Federated Training Stage
 
 ## Purpose
-The `inclusive_federated_training` stage simulates **3 institutions** training a single global model.
+The `inclusive_federated_training` stage simulates **3 institutions** training a single global model with a clear client/server object model and Flower FedProx aggregation.
 
 The stage follows the repository architecture:
 - CLI (`main.py`) selects the stage.
 - Composition root (`composition/run_inclusive_federated_training.py`) loads and validates config.
-- Stage (`stages/inclusive_federated_training/stage.py`) orchestrates data loading, training rounds, aggregation, evaluation, and artifact persistence.
+- Stage (`stages/inclusive_federated_training/stage.py`) orchestrates data loading, institution node wiring, federated rounds, evaluation, and artifact persistence.
 - Core modules (`core/*`) hold reusable model/training/evaluation logic.
+
+
+## Federated Object Model
+The stage now models each institution similarly to a separately deployed client:
+
+- `InstitutionNode` (`domain/federated/fedprox_orchestrator.py`) encapsulates one bank dataset and performs local optimization.
+- `ThreeInstitutionFedProxOrchestrator` (`domain/federated/fedprox_orchestrator.py`) acts as the server-side coordinator.
+- Aggregation is delegated to Flower's `FedProx` strategy via `aggregate_fit`, making federated behavior explicit and framework-aligned.
 
 ## Configuration
 Use `configs/inclusive_federated.toml`:
@@ -69,5 +77,11 @@ Files:
 - `epoch`
 - `train_loss`
 - `val_loss`
-- `metrics` (local losses and per-institution evaluation)
+- `metrics` (local loss, sample counts, model delta magnitudes, and per-institution evaluation)
 - `learning_rate`
+
+`train.log` now includes one line per institution for each federated round, including:
+- local training loss
+- global-model evaluation loss/accuracy on that institution
+- number of local samples
+- model update magnitude (`weight_delta_l2`, `bias_delta_abs`)
