@@ -124,10 +124,20 @@ class TabNetModel:
         labels: list[int],
         learning_rate: float,
         epochs: int,
+        global_parameters: dict[str, list[float]] | None = None,
+        proximal_mu: float = 0.0,
     ) -> float:
         self.network.train()
         optimizer = torch.optim.Adam(self.network.parameters(), lr=learning_rate)
         criterion = nn.BCEWithLogitsLoss()
+
+        initial_state: dict[str, Tensor] = {}
+        if global_parameters is not None and proximal_mu > 0.0:
+            current_state = self.network.state_dict()
+            for name, tensor in current_state.items():
+                initial_state[name] = torch.tensor(
+                    global_parameters[name], dtype=tensor.dtype, device=tensor.device
+                ).reshape(tensor.shape)
 
         inputs = torch.tensor(features, dtype=torch.float32, device=self.device)
         targets = torch.tensor(labels, dtype=torch.float32, device=self.device)
@@ -138,6 +148,13 @@ class TabNetModel:
             logits, sparsity_loss = self.network(inputs)
             clf_loss = criterion(logits, targets)
             total_loss = clf_loss + self.sparsity_weight * sparsity_loss
+
+            if initial_state:
+                prox_term = torch.tensor(0.0, device=self.device)
+                for name, parameter in self.network.named_parameters():
+                    prox_term = prox_term + torch.sum((parameter - initial_state[name]) ** 2)
+                total_loss = total_loss + 0.5 * proximal_mu * prox_term
+
             total_loss.backward()
             optimizer.step()
             final_loss = float(total_loss.detach().cpu().item())
