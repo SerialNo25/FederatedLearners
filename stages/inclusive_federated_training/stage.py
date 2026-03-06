@@ -14,6 +14,7 @@ from domain.federated.fedprox_orchestrator import (
     ThreeInstitutionFedProxOrchestrator,
 )
 from domain.logging.experiment_logger import StageExperimentLogger
+from domain.metrics.aggregation import weighted_mean
 from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
 from domain.models.device_selector import DeviceSelector
 from domain.models.model_registry import MODEL_REGISTRY
@@ -114,7 +115,7 @@ class InclusiveFederatedTrainingStage:
         }
         line = {
             "epoch": round_index,
-            "train_loss": sum(local_loss.values()) / len(local_loss),
+            "train_loss": weighted_mean(list(local_loss.values()), list(local_num_samples.values())),
             "val_loss": sum(metric.loss for metric in evaluations) / len(evaluations),
             "metrics": {
                 "local_loss": local_loss,
