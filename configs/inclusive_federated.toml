@@ -4,7 +4,7 @@ num_rounds = 5
 local_epochs = 5
 learning_rate = 0.05
 proximal_mu = 0.001
-model_type = "logistic_regression" # must exist in domain/models/model_registry.py
+model_type = "tabnet" # must exist in domain/models/model_registry.py
 
 # TabNet-only options (used when model_type = "tabnet")
 tabnet_decision_dim = 16
