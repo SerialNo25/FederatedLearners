@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import inspect
 import math
 
 
@@ -30,13 +31,20 @@ def train_local_model(
     global_parameters: dict[str, list[float]] | None = None,
 ) -> float:
     if hasattr(model, "fit"):
+        fit_signature = inspect.signature(model.fit)
+        fit_kwargs = {
+            "features": features,
+            "labels": labels,
+            "learning_rate": config.learning_rate,
+            "epochs": config.local_epochs,
+        }
+        if "global_parameters" in fit_signature.parameters:
+            fit_kwargs["global_parameters"] = global_parameters
+        if "proximal_mu" in fit_signature.parameters:
+            fit_kwargs["proximal_mu"] = config.proximal_mu
+
         return float(
-            model.fit(
-                features=features,
-                labels=labels,
-                learning_rate=config.learning_rate,
-                epochs=config.local_epochs,
-            )
+            model.fit(**fit_kwargs)
         )
 
     initial_parameters = global_parameters if global_parameters is not None else model.parameters()
