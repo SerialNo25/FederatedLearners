@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from run.run_federated_training import run_federated_training
+from composition.run_federated_training import run_federated_training
 
 StageRunner = Callable[[str | Path], Path]
 

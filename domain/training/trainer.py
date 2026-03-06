@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
-from core.models.basic_model import LogisticRegressionModel
+from domain.models.basic_model import LogisticRegressionModel
 
 
 @dataclass(frozen=True)

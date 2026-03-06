@@ -116,41 +116,9 @@ There must be:
 ---
 
 ## File Structure
-
-The project is organized around **domains and experiment stages**.
-
-```
-project/
-│
-├── main.py
-│
-├── run/
-│   ├── run_partition.py
-│   ├── run_local_training.py
-│   ├── run_federated_training.py
-│   ├── run_ensemble.py
-│   └── run_evaluation.py
-│
-├── stages/
-│   ├── partition/
-│   ├── local_training/
-│   ├── federated_training/
-│   ├── ensemble/
-│   └── evaluation/
-│
-├── core/
-│   ├── data/
-│   ├── models/
-│   ├── training/
-│   ├── federated/
-│   └── metrics/
-│
-├── configs/
-│
-├── data/
-│
-└── docs/
-```
+The project should be domain and stage partitioned. 
+Core logic resides in the domain partitioned by domain model. 
+Stages and related files are partitioned together.
 
 ---
 
@@ -185,14 +153,6 @@ Responsibilities:
 * Construct shared services
 * Instantiate the appropriate Stage
 * Execute the stage
-
-Example:
-
-```
-run_local_training()
-run_federated_training()
-run_ensemble()
-```
 
 This layer is responsible for **dependency wiring only**.
 
@@ -348,16 +308,6 @@ Also includes:
 
 Each stage defines its own configuration schema.
 
-Example:
-
-```
-PartitionConfig
-LocalTrainingConfig
-FederatedTrainingConfig
-EnsembleConfig
-EvaluationConfig
-```
-
 Rules:
 
 * All configs validated
@@ -368,31 +318,7 @@ Rules:
 
 ## Layer 5 — Core Domain Logic
 
-The **core module** contains all reusable ML logic.
-
-Examples:
-
-```
-core/data/
-    dataset_loader.py
-    partitioning.py
-
-core/models/
-    tabnet_model.py
-
-core/training/
-    trainer.py
-    loss.py
-
-core/federated/
-    fedprox.py
-    client.py
-    server.py
-
-core/metrics/
-    pr_auc.py
-    evaluation.py
-```
+The **domain module** contains all reusable ML logic.
 
 Core modules must:
 
@@ -419,6 +345,8 @@ Execution steps:
 5. Stage instantiated
 6. Stage orchestrates workflow
 7. Core services perform computation
+
+Every stage should have a sh script to start the stage with its default config.
 
 ---
 

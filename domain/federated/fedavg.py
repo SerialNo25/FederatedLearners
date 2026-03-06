@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from core.data.dataset_loader import InstitutionDataset
-from core.models.basic_model import LogisticRegressionModel
-from core.training.trainer import TrainingConfig, train_local_model
+from domain.data.dataset_loader import InstitutionDataset
+from domain.models.basic_model import LogisticRegressionModel
+from domain.training.trainer import TrainingConfig, train_local_model
 
 
 @dataclass(frozen=True)

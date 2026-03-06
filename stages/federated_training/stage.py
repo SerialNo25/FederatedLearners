@@ -6,12 +6,12 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from core.data.dataset_loader import InstitutionDataset, load_institution_dataset
-from core.federated.fedavg import InstitutionUpdate, run_federated_round
-from core.logging.experiment_logger import StageExperimentLogger
-from core.metrics.evaluation import InstitutionMetrics, evaluate_institution
-from core.models.basic_model import LogisticRegressionModel
-from core.training.trainer import TrainingConfig
+from domain.data.dataset_loader import InstitutionDataset, load_institution_dataset
+from domain.federated.fedavg import InstitutionUpdate, run_federated_round
+from domain.logging.experiment_logger import StageExperimentLogger
+from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
+from domain.models.basic_model import LogisticRegressionModel
+from domain.training.trainer import TrainingConfig
 from stages.federated_training.config import FederatedTrainingConfig
 
 
