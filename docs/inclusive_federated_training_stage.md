@@ -26,6 +26,14 @@ Use `configs/inclusive_federated.toml`:
 - `local_epochs`
 - `learning_rate`
 - `proximal_mu`
+- `model_type` (must match a registered model in `domain/models/model_registry.py`)
+- TabNet options (used when `model_type = "tabnet"`):
+  - `tabnet_decision_dim`
+  - `tabnet_attention_dim`
+  - `tabnet_steps`
+  - `tabnet_relaxation_factor`
+  - `tabnet_sparsity_weight`
+  - `tabnet_device`
 - `[[institutions]]` (must be exactly 3)
   - `institution_id`
   - `dataset_path`

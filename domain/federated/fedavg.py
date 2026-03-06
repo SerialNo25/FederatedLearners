@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from domain.dataset.dataset_loader import InstitutionDataset
-from domain.models.basic_model import LogisticRegressionModel
 from domain.training.trainer import TrainingConfig, train_local_model
 
 
@@ -13,38 +12,48 @@ from domain.training.trainer import TrainingConfig, train_local_model
 class InstitutionUpdate:
     institution_id: str
     num_samples: int
-    weights: list[float]
-    bias: float
+    parameters: dict[str, list[float]]
     local_loss: float
 
 
-def aggregate_weighted(updates: list[InstitutionUpdate]) -> tuple[list[float], float]:
+def _scale_parameters(parameters: dict[str, list[float]], scalar: float) -> dict[str, list[float]]:
+    return {name: [value * scalar for value in values] for name, values in parameters.items()}
+
+
+def _add_parameters(
+    lhs: dict[str, list[float]], rhs: dict[str, list[float]]
+) -> dict[str, list[float]]:
+    return {
+        name: [left + right for left, right in zip(lhs[name], rhs[name])] for name in lhs
+    }
+
+
+def aggregate_weighted(updates: list[InstitutionUpdate]) -> dict[str, list[float]]:
     total_samples = sum(update.num_samples for update in updates)
-    n_features = len(updates[0].weights)
-    aggregated_weights = [0.0] * n_features
-    aggregated_bias = 0.0
+    weighted_sum: dict[str, list[float]] = {}
 
     for update in updates:
-        for feature_idx, value in enumerate(update.weights):
-            aggregated_weights[feature_idx] += value * update.num_samples
-        aggregated_bias += update.bias * update.num_samples
+        scaled = _scale_parameters(update.parameters, update.num_samples)
+        if not weighted_sum:
+            weighted_sum = scaled
+            continue
+        weighted_sum = _add_parameters(weighted_sum, scaled)
 
-    aggregated_weights = [value / total_samples for value in aggregated_weights]
-    aggregated_bias /= total_samples
-    return aggregated_weights, aggregated_bias
+    return {name: [value / total_samples for value in values] for name, values in weighted_sum.items()}
 
 
 def run_federated_round(
-    global_model: LogisticRegressionModel,
+    global_model,
     institution_datasets: list[InstitutionDataset],
     training_config: TrainingConfig,
+    local_model_factory,
 ) -> list[InstitutionUpdate]:
     updates: list[InstitutionUpdate] = []
     global_params = global_model.parameters()
 
     for dataset in institution_datasets:
-        local_model = LogisticRegressionModel.initialize(len(dataset.features[0]))
-        local_model.load_parameters(*global_params)
+        local_model = local_model_factory(len(dataset.features[0]))
+        local_model.load_parameters(global_params)
         local_loss = train_local_model(
             model=local_model,
             features=dataset.features,
@@ -52,16 +61,14 @@ def run_federated_round(
             config=training_config,
             global_parameters=global_params,
         )
-        weights, bias = local_model.parameters()
         updates.append(
             InstitutionUpdate(
                 institution_id=dataset.institution_id,
                 num_samples=len(dataset.labels),
-                weights=weights,
-                bias=bias,
+                parameters=local_model.parameters(),
                 local_loss=local_loss,
             )
         )
 
-    global_model.load_parameters(*aggregate_weighted(updates))
+    global_model.load_parameters(aggregate_weighted(updates))
     return updates

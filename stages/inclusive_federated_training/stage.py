@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
 from domain.federated.fedprox_orchestrator import (
@@ -14,7 +15,7 @@ from domain.federated.fedprox_orchestrator import (
 )
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
-from domain.models.basic_model import LogisticRegressionModel
+from domain.models.model_registry import MODEL_REGISTRY
 from domain.training.trainer import TrainingConfig
 from stages.inclusive_federated_training.config import InclusiveFederatedTrainingConfig
 
@@ -32,14 +33,19 @@ class InclusiveFederatedTrainingStage:
             stage_name="inclusive_federated_training",
         )
 
-        model = LogisticRegressionModel.initialize(len(datasets[0].features[0]))
+        model_factory = MODEL_REGISTRY.get_factory(self.config.model_type, self.config.to_dict())
+        model = model_factory(len(datasets[0].features[0]))
         training_config = TrainingConfig(
             learning_rate=self.config.learning_rate,
             local_epochs=self.config.local_epochs,
             proximal_mu=self.config.proximal_mu,
         )
         institutions = [
-            InstitutionNode(dataset=dataset, training_config=training_config)
+            InstitutionNode(
+                dataset=dataset,
+                training_config=training_config,
+                model_factory=model_factory,
+            )
             for dataset in datasets
         ]
         orchestrator = ThreeInstitutionFedProxOrchestrator(
@@ -89,10 +95,9 @@ class InclusiveFederatedTrainingStage:
     ) -> None:
         local_loss = {update.institution_id: update.local_loss for update in updates}
         local_num_samples = {update.institution_id: update.num_samples for update in updates}
-        local_weight_delta_l2 = {
-            update.institution_id: update.weight_delta_l2 for update in updates
+        local_parameter_delta_l2 = {
+            update.institution_id: update.parameter_delta_l2 for update in updates
         }
-        local_bias_delta_abs = {update.institution_id: update.bias_delta_abs for update in updates}
         eval_payload = {
             metric.institution_id: {"loss": metric.loss, "accuracy": metric.accuracy}
             for metric in evaluations
@@ -104,8 +109,7 @@ class InclusiveFederatedTrainingStage:
             "metrics": {
                 "local_loss": local_loss,
                 "local_num_samples": local_num_samples,
-                "local_weight_delta_l2": local_weight_delta_l2,
-                "local_bias_delta_abs": local_bias_delta_abs,
+                "local_parameter_delta_l2": local_parameter_delta_l2,
                 "institution_evaluation": eval_payload,
             },
             "learning_rate": None,
@@ -126,7 +130,7 @@ class InclusiveFederatedTrainingStage:
             evaluation = evaluation_by_institution[update.institution_id]
             experiment_logger.info(
                 "round=%s institution=%s local_loss=%.6f eval_loss=%.6f eval_accuracy=%.6f "
-                "num_samples=%s weight_delta_l2=%.6f bias_delta_abs=%.6f"
+                "num_samples=%s parameter_delta_l2=%.6f"
                 % (
                     round_index,
                     update.institution_id,
@@ -134,15 +138,15 @@ class InclusiveFederatedTrainingStage:
                     evaluation.loss,
                     evaluation.accuracy,
                     update.num_samples,
-                    update.weight_delta_l2,
-                    update.bias_delta_abs,
+                    update.parameter_delta_l2,
                 )
             )
 
-    def _persist_artifacts(self, experiment_dir: Path, model: LogisticRegressionModel) -> None:
+    def _persist_artifacts(self, experiment_dir: Path, model: Any) -> None:
         (experiment_dir / "config.json").write_text(
             json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
         )
-        weights, bias = model.parameters()
-        payload = {"weights": weights, "bias": bias}
-        (experiment_dir / "model.pt").write_text(json.dumps(payload), encoding="utf-8")
+        (experiment_dir / "model.pt").write_text(
+            json.dumps(model.parameters()),
+            encoding="utf-8",
+        )

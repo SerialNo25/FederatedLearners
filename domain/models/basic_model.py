@@ -25,9 +25,9 @@ class LogisticRegressionModel:
             probabilities.append(1.0 / (1.0 + math.exp(-logit)))
         return probabilities
 
-    def parameters(self) -> tuple[list[float], float]:
-        return self.weights[:], float(self.bias)
+    def parameters(self) -> dict[str, list[float]]:
+        return {"weights": self.weights[:], "bias": [float(self.bias)]}
 
-    def load_parameters(self, weights: list[float], bias: float) -> None:
-        self.weights = [float(weight) for weight in weights]
-        self.bias = float(bias)
+    def load_parameters(self, parameters: dict[str, list[float]]) -> None:
+        self.weights = [float(weight) for weight in parameters["weights"]]
+        self.bias = float(parameters["bias"][0])
