@@ -28,7 +28,8 @@ class InclusiveFederatedTrainingStage:
             stage_name="inclusive_federated_training",
         )
 
-        model = LogisticRegressionModel.initialize(len(datasets[0].features[0]))
+        model_factory = self._build_model_factory()
+        model = model_factory(len(datasets[0].features[0]))
         training_config = TrainingConfig(
             learning_rate=self.config.learning_rate,
             local_epochs=self.config.local_epochs,
@@ -39,7 +40,7 @@ class InclusiveFederatedTrainingStage:
         experiment_logger.info(f"config={json.dumps(self.config.to_dict(), indent=2)}")
 
         for round_index in range(1, self.config.num_rounds + 1):
-            updates = run_federated_round(model, datasets, training_config)
+            updates = run_federated_round(model, datasets, training_config, model_factory)
             evaluations = [evaluate_institution(model, dataset) for dataset in datasets]
             self._write_round_metrics(experiment_logger, round_index, updates, evaluations)
             round_loss = sum(metric.loss for metric in evaluations) / len(evaluations)
@@ -50,6 +51,21 @@ class InclusiveFederatedTrainingStage:
 
         self._persist_artifacts(experiment_dir, model)
         return experiment_dir
+
+    def _build_model_factory(self):
+        if self.config.model_type == "tabnet":
+            from domain.models.tabnet_model import TabNetModel
+
+            return lambda n_features: TabNetModel.initialize(
+                n_features=n_features,
+                decision_dim=self.config.tabnet_decision_dim,
+                attention_dim=self.config.tabnet_attention_dim,
+                n_steps=self.config.tabnet_steps,
+                relaxation_factor=self.config.tabnet_relaxation_factor,
+                sparsity_weight=self.config.tabnet_sparsity_weight,
+                device=self.config.tabnet_device,
+            )
+        return lambda n_features: LogisticRegressionModel.initialize(n_features)
 
     def _load_datasets(self) -> list[InstitutionDataset]:
         return [
@@ -81,10 +97,9 @@ class InclusiveFederatedTrainingStage:
         }
         experiment_logger.write_metrics(step=f"round_{round_index}", values=line)
 
-    def _persist_artifacts(self, experiment_dir: Path, model: LogisticRegressionModel) -> None:
+    def _persist_artifacts(self, experiment_dir: Path, model) -> None:
         (experiment_dir / "config.json").write_text(
             json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
         )
-        weights, bias = model.parameters()
-        payload = {"weights": weights, "bias": bias}
+        payload = model.parameters()
         (experiment_dir / "model.pt").write_text(json.dumps(payload), encoding="utf-8")

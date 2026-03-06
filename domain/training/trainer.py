@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
-from domain.models.basic_model import LogisticRegressionModel
-
 
 @dataclass(frozen=True)
 class TrainingConfig:
@@ -25,15 +23,25 @@ def binary_cross_entropy(y_true: list[int] | list[float], y_prob: list[float]) -
 
 
 def train_local_model(
-    model: LogisticRegressionModel,
+    model,
     features: list[list[float]],
     labels: list[int],
     config: TrainingConfig,
-    global_parameters: tuple[list[float], float] | None = None,
+    global_parameters: dict[str, list[float]] | None = None,
 ) -> float:
-    initial_weights, initial_bias = (
-        global_parameters if global_parameters is not None else model.parameters()
-    )
+    if hasattr(model, "fit"):
+        return float(
+            model.fit(
+                features=features,
+                labels=labels,
+                learning_rate=config.learning_rate,
+                epochs=config.local_epochs,
+            )
+        )
+
+    initial_parameters = global_parameters if global_parameters is not None else model.parameters()
+    initial_weights = initial_parameters["weights"]
+    initial_bias = initial_parameters["bias"][0]
 
     n_samples = len(features)
     n_features = len(features[0]) if features else 0
