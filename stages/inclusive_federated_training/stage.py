@@ -30,7 +30,6 @@ class InclusiveFederatedTrainingStage:
         experiment_dir = self.config.output_dir / self.config.experiment_name
         experiment_logger = StageExperimentLogger(
             experiment_dir=str(experiment_dir),
-            config=self.config.to_dict(),
             stage_name="inclusive_federated_training",
         )
 
