@@ -17,25 +17,33 @@ class InstitutionConfig(BaseModel):
 class InclusiveFederatedTrainingConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    experiment_name: str = "inclusive_federated_global_3_institutions"
+    experiment_name: str = "inclusive_federated_global"
     output_dir: Path = Path("dataset/experiments")
+    num_institutions: int
     institutions: list[InstitutionConfig] = Field(default_factory=list)
-    num_rounds: int = 5
-    local_epochs: int = 3
-    learning_rate: float = 0.05
-    proximal_mu: float = 0.001
-    model_type: str = "logistic_regression"
-    tabnet_decision_dim: int = 16
-    tabnet_attention_dim: int = 16
-    tabnet_steps: int = 3
-    tabnet_relaxation_factor: float = 1.5
-    tabnet_sparsity_weight: float = 1e-4
+    num_rounds: int
+    local_epochs: int
+    learning_rate: float
+    proximal_mu: float
+    model_type: str
+    tabnet_decision_dim: int
+    tabnet_attention_dim: int
+    tabnet_steps: int
+    tabnet_relaxation_factor: float
+    tabnet_sparsity_weight: float
 
     @field_validator("num_rounds", "local_epochs")
     @classmethod
     def _validate_positive_training_counts(cls, value: int) -> int:
         if value < 1:
             raise ValueError("num_rounds and local_epochs must be >= 1")
+        return value
+
+    @field_validator("num_institutions")
+    @classmethod
+    def _validate_num_institutions(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("num_institutions must be >= 1")
         return value
 
     @field_validator("learning_rate")
@@ -69,8 +77,10 @@ class InclusiveFederatedTrainingConfig(BaseModel):
 
     @model_validator(mode="after")
     def _validate_institutions(self) -> "InclusiveFederatedTrainingConfig":
-        if len(self.institutions) != 3:
-            raise ValueError("Exactly 3 institutions must be configured")
+        if len(self.institutions) != self.num_institutions:
+            raise ValueError(
+                "Configured institutions count must match num_institutions"
+            )
 
         ids = [institution.institution_id for institution in self.institutions]
         if len(ids) != len(set(ids)):

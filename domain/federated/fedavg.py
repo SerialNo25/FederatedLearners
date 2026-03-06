@@ -1,4 +1,4 @@
-"""Federated optimization routines for three-institution training."""
+"""Federated optimization routines for multi-institution training."""
 
 from __future__ import annotations
 
