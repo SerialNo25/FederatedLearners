@@ -33,7 +33,7 @@ Use `configs/inclusive_federated.toml`:
   - `tabnet_steps`
   - `tabnet_relaxation_factor`
   - `tabnet_sparsity_weight`
-  - `tabnet_device`
+- Device is auto-selected at runtime by priority: `cuda > mps > cpu`
 - `[[institutions]]` (must be exactly 3)
   - `institution_id`
   - `dataset_path`

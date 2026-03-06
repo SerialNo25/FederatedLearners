@@ -6,6 +6,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from domain.models.basic_model import LogisticRegressionModel
+from domain.models.device_selector import DeviceSelector
 
 ModelFactory = Callable[[int, Mapping[str, Any]], Any]
 
@@ -46,6 +47,7 @@ def _build_logistic_regression_model(n_features: int, config: Mapping[str, Any])
 def _build_tabnet_model(n_features: int, config: Mapping[str, Any]) -> Any:
     from domain.models.tabnet_model import TabNetModel
 
+    device = DeviceSelector().select_best_device()
     return TabNetModel.initialize(
         n_features=n_features,
         decision_dim=int(config.get("tabnet_decision_dim", 16)),
@@ -53,7 +55,7 @@ def _build_tabnet_model(n_features: int, config: Mapping[str, Any]) -> Any:
         n_steps=int(config.get("tabnet_steps", 3)),
         relaxation_factor=float(config.get("tabnet_relaxation_factor", 1.5)),
         sparsity_weight=float(config.get("tabnet_sparsity_weight", 1e-4)),
-        device=str(config.get("tabnet_device", "cpu")),
+        device=device,
     )
 
 

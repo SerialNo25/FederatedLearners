@@ -29,7 +29,6 @@ class InclusiveFederatedTrainingConfig:
     tabnet_steps: int
     tabnet_relaxation_factor: float
     tabnet_sparsity_weight: float
-    tabnet_device: str
 
     @classmethod
     def from_dict(cls, payload: dict) -> "InclusiveFederatedTrainingConfig":
@@ -54,7 +53,6 @@ class InclusiveFederatedTrainingConfig:
             tabnet_steps=int(payload.get("tabnet_steps", 3)),
             tabnet_relaxation_factor=float(payload.get("tabnet_relaxation_factor", 1.5)),
             tabnet_sparsity_weight=float(payload.get("tabnet_sparsity_weight", 1e-4)),
-            tabnet_device=str(payload.get("tabnet_device", "cpu")),
         )
         config.validate()
         return config
@@ -97,5 +95,4 @@ class InclusiveFederatedTrainingConfig:
             "tabnet_steps": self.tabnet_steps,
             "tabnet_relaxation_factor": self.tabnet_relaxation_factor,
             "tabnet_sparsity_weight": self.tabnet_sparsity_weight,
-            "tabnet_device": self.tabnet_device,
         }
