@@ -28,7 +28,7 @@ class InclusiveFederatedTrainingStage:
             stage_name="inclusive_federated_training",
         )
 
-        model_factory = self._build_model_factory()
+        model_factory = MODEL_REGISTRY.get_factory(self.config.model_type, self.config.to_dict())
         model = model_factory(len(datasets[0].features[0]))
         training_config = TrainingConfig(
             learning_rate=self.config.learning_rate,
@@ -51,9 +51,6 @@ class InclusiveFederatedTrainingStage:
 
         self._persist_artifacts(experiment_dir, model)
         return experiment_dir
-
-    def _build_model_factory(self):
-        return MODEL_REGISTRY.get_factory(self.config.model_type, self.config.to_dict())
 
     def _load_datasets(self) -> list[InstitutionDataset]:
         return [
