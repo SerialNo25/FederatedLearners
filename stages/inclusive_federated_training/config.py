@@ -19,18 +19,18 @@ class InclusiveFederatedTrainingConfig(BaseModel):
 
     experiment_name: str = "inclusive_federated_global"
     output_dir: Path = Path("dataset/experiments")
-    num_institutions: int = 3
+    num_institutions: int
     institutions: list[InstitutionConfig] = Field(default_factory=list)
-    num_rounds: int = 5
-    local_epochs: int = 3
-    learning_rate: float = 0.05
-    proximal_mu: float = 0.001
-    model_type: str = "logistic_regression"
-    tabnet_decision_dim: int = 16
-    tabnet_attention_dim: int = 16
-    tabnet_steps: int = 3
-    tabnet_relaxation_factor: float = 1.5
-    tabnet_sparsity_weight: float = 1e-4
+    num_rounds: int
+    local_epochs: int
+    learning_rate: float
+    proximal_mu: float
+    model_type: str
+    tabnet_decision_dim: int
+    tabnet_attention_dim: int
+    tabnet_steps: int
+    tabnet_relaxation_factor: float
+    tabnet_sparsity_weight: float
 
     @field_validator("num_rounds", "local_epochs")
     @classmethod
