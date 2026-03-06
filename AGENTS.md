@@ -440,6 +440,73 @@ Composition roots
 
 ---
 
+# Data Structure
+
+The project operates on a **tabular binary classification dataset** for fraud detection.
+
+Each row represents a single transaction with the following schema:
+
+```text
+"Time","V1","V2","V3","V4","V5","V6","V7","V8","V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20","V21","V22","V23","V24","V25","V26","V27","V28","Amount","Class"
+```
+
+### Column Semantics
+
+* `Time`: numerical timestamp-like feature representing the elapsed time since the first recorded transaction
+* `V1` to `V28`: anonymized numerical features
+* `Amount`: transaction amount
+* `Class`: binary target label
+
+  * `0` = legitimate transaction
+  * `1` = fraudulent transaction
+
+### Data Rules
+
+* Input features consist of all columns except `Class`
+* Target labels are taken exclusively from `Class`
+* The dataset is treated as **fully numeric tabular data**
+* No categorical encoding is required unless new features are introduced later
+* Any preprocessing must preserve compatibility across:
+
+  * local bank training
+  * inclusive federated training
+  * exclusive federated training
+  * ensemble evaluation
+
+### Recommended Internal Representation
+
+Core data modules should represent a transaction dataset as:
+
+* `features`: 2D numeric matrix of shape `(n_samples, 30)`
+* `labels`: 1D binary vector of shape `(n_samples,)`
+
+Feature ordering must remain stable and follow this exact order:
+
+```text
+Time, V1, V2, V3, V4, V5, V6, V7, V8, V9, V10, V11, V12, V13, V14, V15, V16, V17, V18, V19, V20, V21, V22, V23, V24, V25, V26, V27, V28, Amount
+```
+
+### Partitioning Constraints
+
+When partitioning the dataset into simulated banks:
+
+* All partitions must preserve the same schema
+* `Class` must remain the final target column conceptually, even if stored separately in memory
+* Feature order must never change between stages
+* Any normalization or scaling applied to `Time` or `Amount` must be documented and reproducible
+
+### Validation Requirements
+
+Data-loading code should validate that:
+
+* All required columns are present
+* Column names match expected names exactly
+* `Class` contains only binary values
+* Feature columns are numeric
+* No stage silently reorders or drops columns without explicit configuration
+
+---
+
 # Data Management
 
 All stages store outputs in the `data/` directory.
