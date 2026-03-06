@@ -1,4 +1,4 @@
-experiment_name = "federated_global_3_institutions"
+experiment_name = "inclusive_federated_global_3_institutions"
 output_dir = "data/experiments"
 num_rounds = 5
 local_epochs = 5

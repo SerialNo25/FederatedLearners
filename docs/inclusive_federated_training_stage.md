@@ -1,16 +1,16 @@
-# Federated Training Stage
+# Inclusive Federated Training Stage
 
 ## Purpose
-The `federated_training` stage simulates **3 institutions** training a single global model.
+The `inclusive_federated_training` stage simulates **3 institutions** training a single global model.
 
 The stage follows the repository architecture:
 - CLI (`main.py`) selects the stage.
-- Composition root (`run/run_federated_training.py`) loads and validates config.
-- Stage (`stages/federated_training/stage.py`) orchestrates data loading, training rounds, aggregation, evaluation, and artifact persistence.
+- Composition root (`composition/run_inclusive_federated_training.py`) loads and validates config.
+- Stage (`stages/inclusive_federated_training/stage.py`) orchestrates data loading, training rounds, aggregation, evaluation, and artifact persistence.
 - Core modules (`core/*`) hold reusable model/training/evaluation logic.
 
 ## Configuration
-Use `configs/federated.toml`:
+Use `configs/inclusive_federated.toml`:
 
 - `experiment_name`
 - `output_dir`
@@ -36,12 +36,12 @@ Validation enforces:
 
 ## Execution
 ```bash
-python main.py federated_training --config configs/federated.toml
+python main.py inclusive_federated_training --config configs/inclusive_federated.toml
 ```
 
 Or via helper script:
 ```bash
-./scripts/run_federated_training.sh configs/federated.toml
+./scripts/run_inclusive_federated_training.sh configs/inclusive_federated.toml
 ```
 
 ## Outputs
