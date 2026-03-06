@@ -2,100 +2,86 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from domain.models.model_registry import MODEL_REGISTRY
 
 
-@dataclass(frozen=True)
-class InstitutionConfig:
+class InstitutionConfig(BaseModel):
     institution_id: str
     dataset_path: Path
 
 
-@dataclass(frozen=True)
-class InclusiveFederatedTrainingConfig:
-    experiment_name: str
-    output_dir: Path
-    institutions: list[InstitutionConfig]
-    num_rounds: int
-    local_epochs: int
-    learning_rate: float
-    proximal_mu: float
-    model_type: str
-    tabnet_decision_dim: int
-    tabnet_attention_dim: int
-    tabnet_steps: int
-    tabnet_relaxation_factor: float
-    tabnet_sparsity_weight: float
-    tabnet_device: str
+class InclusiveFederatedTrainingConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    experiment_name: str = "inclusive_federated_global_3_institutions"
+    output_dir: Path = Path("dataset/experiments")
+    institutions: list[InstitutionConfig] = Field(default_factory=list)
+    num_rounds: int = 5
+    local_epochs: int = 3
+    learning_rate: float = 0.05
+    proximal_mu: float = 0.001
+    model_type: str = "logistic_regression"
+    tabnet_decision_dim: int = 16
+    tabnet_attention_dim: int = 16
+    tabnet_steps: int = 3
+    tabnet_relaxation_factor: float = 1.5
+    tabnet_sparsity_weight: float = 1e-4
+    tabnet_device: str = "cpu"
+
+    @field_validator("num_rounds", "local_epochs")
+    @classmethod
+    def _validate_positive_training_counts(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("num_rounds and local_epochs must be >= 1")
+        return value
+
+    @field_validator("learning_rate")
+    @classmethod
+    def _validate_learning_rate(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("learning_rate must be > 0")
+        return value
+
+    @field_validator("proximal_mu")
+    @classmethod
+    def _validate_proximal_mu(cls, value: float) -> float:
+        if value < 0:
+            raise ValueError("proximal_mu must be >= 0")
+        return value
+
+    @field_validator("tabnet_steps")
+    @classmethod
+    def _validate_tabnet_steps(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("tabnet_steps must be >= 1")
+        return value
+
+    @field_validator("model_type")
+    @classmethod
+    def _validate_model_type(cls, value: str) -> str:
+        if not MODEL_REGISTRY.has(value):
+            valid_model_types = ", ".join(MODEL_REGISTRY.list_model_types())
+            raise ValueError(f"model_type must be one of: {valid_model_types}")
+        return value
+
+    @model_validator(mode="after")
+    def _validate_institutions(self) -> "InclusiveFederatedTrainingConfig":
+        if len(self.institutions) != 3:
+            raise ValueError("Exactly 3 institutions must be configured")
+
+        ids = [institution.institution_id for institution in self.institutions]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Institution IDs must be unique")
+
+        return self
 
     @classmethod
     def from_dict(cls, payload: dict) -> "InclusiveFederatedTrainingConfig":
-        institutions = [
-            InstitutionConfig(
-                institution_id=institution["institution_id"],
-                dataset_path=Path(institution["dataset_path"]),
-            )
-            for institution in payload.get("institutions", [])
-        ]
-        config = cls(
-            experiment_name=payload.get("experiment_name", "inclusive_federated_global_3_institutions"),
-            output_dir=Path(payload.get("output_dir", "dataset/experiments")),
-            institutions=institutions,
-            num_rounds=int(payload.get("num_rounds", 5)),
-            local_epochs=int(payload.get("local_epochs", 3)),
-            learning_rate=float(payload.get("learning_rate", 0.05)),
-            proximal_mu=float(payload.get("proximal_mu", 0.001)),
-            model_type=str(payload.get("model_type", "logistic_regression")),
-            tabnet_decision_dim=int(payload.get("tabnet_decision_dim", 16)),
-            tabnet_attention_dim=int(payload.get("tabnet_attention_dim", 16)),
-            tabnet_steps=int(payload.get("tabnet_steps", 3)),
-            tabnet_relaxation_factor=float(payload.get("tabnet_relaxation_factor", 1.5)),
-            tabnet_sparsity_weight=float(payload.get("tabnet_sparsity_weight", 1e-4)),
-            tabnet_device=str(payload.get("tabnet_device", "cpu")),
-        )
-        config.validate()
-        return config
-
-    def validate(self) -> None:
-        if len(self.institutions) != 3:
-            raise ValueError("Exactly 3 institutions must be configured")
-        ids = [item.institution_id for item in self.institutions]
-        if len(ids) != len(set(ids)):
-            raise ValueError("Institution IDs must be unique")
-        if self.num_rounds < 1 or self.local_epochs < 1:
-            raise ValueError("num_rounds and local_epochs must be >= 1")
-        if self.learning_rate <= 0:
-            raise ValueError("learning_rate must be > 0")
-        if self.proximal_mu < 0:
-            raise ValueError("proximal_mu must be >= 0")
-        if not MODEL_REGISTRY.has(self.model_type):
-            valid_model_types = ", ".join(MODEL_REGISTRY.list_model_types())
-            raise ValueError(
-                f"model_type must be one of: {valid_model_types}"
-            )
-        if self.tabnet_steps < 1:
-            raise ValueError("tabnet_steps must be >= 1")
+        return cls.model_validate(payload)
 
     def to_dict(self) -> dict:
-        return {
-            "experiment_name": self.experiment_name,
-            "output_dir": str(self.output_dir),
-            "institutions": [
-                {"institution_id": item.institution_id, "dataset_path": str(item.dataset_path)}
-                for item in self.institutions
-            ],
-            "num_rounds": self.num_rounds,
-            "local_epochs": self.local_epochs,
-            "learning_rate": self.learning_rate,
-            "proximal_mu": self.proximal_mu,
-            "model_type": self.model_type,
-            "tabnet_decision_dim": self.tabnet_decision_dim,
-            "tabnet_attention_dim": self.tabnet_attention_dim,
-            "tabnet_steps": self.tabnet_steps,
-            "tabnet_relaxation_factor": self.tabnet_relaxation_factor,
-            "tabnet_sparsity_weight": self.tabnet_sparsity_weight,
-            "tabnet_device": self.tabnet_device,
-        }
+        return self.model_dump(mode="json")
