@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 
 from domain.dataset.dataset_loader import InstitutionDataset
-from domain.models.basic_model import LogisticRegressionModel
 from domain.training.trainer import TrainingConfig, train_local_model
 
 try:
@@ -39,28 +39,31 @@ except ModuleNotFoundError as exc:  # pragma: no cover - handled at runtime
 class InstitutionUpdate:
     institution_id: str
     num_samples: int
-    weights: list[float]
-    bias: float
+    parameters: dict[str, list[float]]
     local_loss: float
-    weight_delta_l2: float
-    bias_delta_abs: float
+    parameter_delta_l2: float
 
 
 class InstitutionNode:
     """Represents one institution client participating in federated rounds."""
 
-    def __init__(self, dataset: InstitutionDataset, training_config: TrainingConfig) -> None:
+    def __init__(
+        self,
+        dataset: InstitutionDataset,
+        training_config: TrainingConfig,
+        model_factory: Callable[[int], Any],
+    ) -> None:
         self.dataset = dataset
         self.training_config = training_config
+        self.model_factory = model_factory
 
     @property
     def institution_id(self) -> str:
         return self.dataset.institution_id
 
-    def fit(self, global_parameters: tuple[list[float], float]) -> InstitutionUpdate:
-        global_weights, global_bias = global_parameters
-        local_model = LogisticRegressionModel.initialize(len(self.dataset.features[0]))
-        local_model.load_parameters(*global_parameters)
+    def fit(self, global_parameters: dict[str, list[float]]) -> InstitutionUpdate:
+        local_model = self.model_factory(len(self.dataset.features[0]))
+        local_model.load_parameters(global_parameters)
 
         local_loss = train_local_model(
             model=local_model,
@@ -69,21 +72,29 @@ class InstitutionNode:
             config=self.training_config,
             global_parameters=global_parameters,
         )
-        weights, bias = local_model.parameters()
-        weight_delta_l2 = float(
-            np.linalg.norm(np.array(weights, dtype=np.float64) - np.array(global_weights, dtype=np.float64))
-        )
-        bias_delta_abs = abs(bias - global_bias)
+        local_parameters = local_model.parameters()
+        parameter_delta_l2 = self._parameter_delta_l2(local_parameters, global_parameters)
 
         return InstitutionUpdate(
             institution_id=self.institution_id,
             num_samples=len(self.dataset.labels),
-            weights=weights,
-            bias=bias,
+            parameters=local_parameters,
             local_loss=local_loss,
-            weight_delta_l2=weight_delta_l2,
-            bias_delta_abs=bias_delta_abs,
+            parameter_delta_l2=parameter_delta_l2,
         )
+
+    @staticmethod
+    def _parameter_delta_l2(
+        local_parameters: dict[str, list[float]],
+        global_parameters: dict[str, list[float]],
+    ) -> float:
+        squares = 0.0
+        for name, local_values in local_parameters.items():
+            global_values = global_parameters[name]
+            local_array = np.array(local_values, dtype=np.float64)
+            global_array = np.array(global_values, dtype=np.float64)
+            squares += float(np.sum((local_array - global_array) ** 2))
+        return float(np.sqrt(squares))
 
 
 class _LocalClientProxy(ClientProxy):
@@ -129,7 +140,7 @@ class ThreeInstitutionFedProxOrchestrator:
     def __init__(
         self,
         institutions: list[InstitutionNode],
-        initial_model: LogisticRegressionModel,
+        initial_model: Any,
         proximal_mu: float,
     ) -> None:
         self._institutions = institutions
@@ -138,6 +149,7 @@ class ThreeInstitutionFedProxOrchestrator:
 
     def run_round(self, round_index: int) -> list[InstitutionUpdate]:
         global_parameters = self._global_model.parameters()
+        parameter_names = list(global_parameters.keys())
         updates = [institution.fit(global_parameters) for institution in self._institutions]
 
         flower_results = [
@@ -146,10 +158,7 @@ class ThreeInstitutionFedProxOrchestrator:
                 FitRes(
                     status=Status(code=Code.OK, message="local_fit_complete"),
                     parameters=ndarrays_to_parameters(
-                        [
-                            np.array(update.weights, dtype=np.float64),
-                            np.array([update.bias], dtype=np.float64),
-                        ]
+                        [np.array(update.parameters[name], dtype=np.float64) for name in parameter_names]
                     ),
                     num_examples=update.num_samples,
                     metrics={"local_loss": update.local_loss},
@@ -169,12 +178,14 @@ class ThreeInstitutionFedProxOrchestrator:
 
         aggregated_ndarrays = parameters_to_ndarrays(aggregated_parameters)
         self._global_model.load_parameters(
-            aggregated_ndarrays[0].tolist(),
-            float(aggregated_ndarrays[1][0]),
+            {
+                name: values.tolist()
+                for name, values in zip(parameter_names, aggregated_ndarrays, strict=True)
+            }
         )
 
         return updates
 
     @property
-    def global_model(self) -> LogisticRegressionModel:
+    def global_model(self) -> Any:
         return self._global_model
