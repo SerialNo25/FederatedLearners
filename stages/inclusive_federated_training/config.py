@@ -33,7 +33,7 @@ class InclusiveFederatedTrainingConfig:
         ]
         config = cls(
             experiment_name=payload.get("experiment_name", "inclusive_federated_global_3_institutions"),
-            output_dir=Path(payload.get("output_dir", "data/experiments")),
+            output_dir=Path(payload.get("output_dir", "dataset/experiments")),
             institutions=institutions,
             num_rounds=int(payload.get("num_rounds", 5)),
             local_epochs=int(payload.get("local_epochs", 3)),

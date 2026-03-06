@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from domain.data.dataset_loader import InstitutionDataset, load_institution_dataset
+from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
 from domain.federated.fedavg import InstitutionUpdate, run_federated_round
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
