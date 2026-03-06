@@ -7,7 +7,7 @@ The stage follows the repository architecture:
 - CLI (`main.py`) selects the stage.
 - Composition root (`composition/run_inclusive_federated_training.py`) loads and validates config.
 - Stage (`stages/inclusive_federated_training/stage.py`) orchestrates data loading, institution node wiring, federated rounds, evaluation, and artifact persistence.
-- Core modules (`core/*`) hold reusable model/training/evaluation logic.
+- Core modules (`domain/*`) hold reusable model/training/evaluation logic.
 
 
 ## Federated Object Model

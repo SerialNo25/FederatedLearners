@@ -58,7 +58,7 @@ Stages:
 
 ### 3. Core ML Logic Isolation
 
-Domain logic lives inside **core modules**.
+Domain logic lives inside **domain modules**.
 
 Examples:
 
