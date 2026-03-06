@@ -30,7 +30,6 @@ class InclusiveFederatedTrainingConfig(BaseModel):
     tabnet_steps: int = 3
     tabnet_relaxation_factor: float = 1.5
     tabnet_sparsity_weight: float = 1e-4
-    tabnet_device: str = "cpu"
 
     @field_validator("num_rounds", "local_epochs")
     @classmethod

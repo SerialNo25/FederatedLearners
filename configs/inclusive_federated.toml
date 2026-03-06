@@ -12,7 +12,7 @@ tabnet_attention_dim = 16
 tabnet_steps = 3
 tabnet_relaxation_factor = 1.5
 tabnet_sparsity_weight = 0.0001
-tabnet_device = "cpu"
+# Device is auto-selected by priority: CUDA > MPS > CPU
 
 [[institutions]]
 institution_id = "bank_1"

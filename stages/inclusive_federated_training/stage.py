@@ -15,6 +15,7 @@ from domain.federated.fedprox_orchestrator import (
 )
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
+from domain.models.device_selector import DeviceSelector
 from domain.models.model_registry import MODEL_REGISTRY
 from domain.training.trainer import TrainingConfig
 from stages.inclusive_federated_training.config import InclusiveFederatedTrainingConfig
@@ -33,7 +34,17 @@ class InclusiveFederatedTrainingStage:
             stage_name="inclusive_federated_training",
         )
 
-        model_factory = MODEL_REGISTRY.get_factory(self.config.model_type, self.config.to_dict())
+        model_config = self.config.to_dict()
+        if self.config.model_type == "tabnet":
+            selector = DeviceSelector()
+            selected_device = selector.select_best_device()
+            model_config["tabnet_device"] = selected_device
+            experiment_logger.info(
+                "tabnet_device_selection selected=%s available=%s"
+                % (selected_device, ",".join(selector.available_devices()))
+            )
+
+        model_factory = MODEL_REGISTRY.get_factory(self.config.model_type, model_config)
         model = model_factory(len(datasets[0].features[0]))
         training_config = TrainingConfig(
             learning_rate=self.config.learning_rate,
