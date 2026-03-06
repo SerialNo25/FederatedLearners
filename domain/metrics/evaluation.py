@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from domain.data.dataset_loader import InstitutionDataset
+from domain.dataset.dataset_loader import InstitutionDataset
 from domain.models.basic_model import LogisticRegressionModel
 from domain.training.trainer import binary_cross_entropy
 

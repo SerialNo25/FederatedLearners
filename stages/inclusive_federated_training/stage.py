@@ -1,4 +1,4 @@
-"""Stage orchestration for three-institution federated training."""
+"""Stage orchestration for three-institution inclusive federated training."""
 
 from __future__ import annotations
 
@@ -6,17 +6,17 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from domain.data.dataset_loader import InstitutionDataset, load_institution_dataset
+from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
 from domain.federated.fedavg import InstitutionUpdate, run_federated_round
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
 from domain.models.basic_model import LogisticRegressionModel
 from domain.training.trainer import TrainingConfig
-from stages.federated_training.config import FederatedTrainingConfig
+from stages.inclusive_federated_training.config import InclusiveFederatedTrainingConfig
 
 
-class FederatedTrainingStage:
-    def __init__(self, config: FederatedTrainingConfig) -> None:
+class InclusiveFederatedTrainingStage:
+    def __init__(self, config: InclusiveFederatedTrainingConfig) -> None:
         self.config = config
 
     def execute(self) -> Path:
@@ -25,7 +25,7 @@ class FederatedTrainingStage:
         experiment_logger = StageExperimentLogger(
             experiment_dir=str(experiment_dir),
             config=self.config.to_dict(),
-            stage_name="federated_training",
+            stage_name="inclusive_federated_training",
         )
 
         model = LogisticRegressionModel.initialize(len(datasets[0].features[0]))

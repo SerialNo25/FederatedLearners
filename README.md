@@ -1,17 +1,17 @@
 # FederatedLearners
 
-## Run federated training
+## Run inclusive federated training
 
 ```bash
-python main.py federated_training --config configs/federated.toml
+python main.py inclusive_federated_training --config configs/inclusive_federated.toml
 ```
 
 Helper script:
 
 ```bash
-./scripts/run_federated_training.sh configs/federated.toml
+./scripts/run_inclusive_federated_training.sh configs/inclusive_federated.toml
 ```
 
 See stage documentation:
 
-- `docs/federated_training_stage.md`
+- `docs/inclusive_federated_training_stage.md`

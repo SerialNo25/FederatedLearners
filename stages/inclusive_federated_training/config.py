@@ -1,4 +1,4 @@
-"""Configuration schema for federated training stage."""
+"""Configuration schema for inclusive federated training stage."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ class InstitutionConfig:
 
 
 @dataclass(frozen=True)
-class FederatedTrainingConfig:
+class InclusiveFederatedTrainingConfig:
     experiment_name: str
     output_dir: Path
     institutions: list[InstitutionConfig]
@@ -23,7 +23,7 @@ class FederatedTrainingConfig:
     proximal_mu: float
 
     @classmethod
-    def from_dict(cls, payload: dict) -> "FederatedTrainingConfig":
+    def from_dict(cls, payload: dict) -> "InclusiveFederatedTrainingConfig":
         institutions = [
             InstitutionConfig(
                 institution_id=institution["institution_id"],
@@ -32,8 +32,8 @@ class FederatedTrainingConfig:
             for institution in payload.get("institutions", [])
         ]
         config = cls(
-            experiment_name=payload.get("experiment_name", "federated_global_3_institutions"),
-            output_dir=Path(payload.get("output_dir", "data/experiments")),
+            experiment_name=payload.get("experiment_name", "inclusive_federated_global_3_institutions"),
+            output_dir=Path(payload.get("output_dir", "dataset/experiments")),
             institutions=institutions,
             num_rounds=int(payload.get("num_rounds", 5)),
             local_epochs=int(payload.get("local_epochs", 3)),
