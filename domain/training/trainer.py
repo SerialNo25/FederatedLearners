@@ -54,6 +54,9 @@ def train_local_model(
     n_samples = len(features)
     n_features = len(features[0]) if features else 0
 
+    if n_samples == 0:
+        return 0.0
+
     for _ in range(config.local_epochs):
         predictions = model.predict_proba(features)
         grad_weights = [0.0] * n_features
