@@ -42,6 +42,8 @@ class InstitutionUpdate:
     weights: list[float]
     bias: float
     local_loss: float
+    weight_delta_l2: float
+    bias_delta_abs: float
 
 
 class InstitutionNode:
@@ -56,6 +58,7 @@ class InstitutionNode:
         return self.dataset.institution_id
 
     def fit(self, global_parameters: tuple[list[float], float]) -> InstitutionUpdate:
+        global_weights, global_bias = global_parameters
         local_model = LogisticRegressionModel.initialize(len(self.dataset.features[0]))
         local_model.load_parameters(*global_parameters)
 
@@ -67,6 +70,10 @@ class InstitutionNode:
             global_parameters=global_parameters,
         )
         weights, bias = local_model.parameters()
+        weight_delta_l2 = float(
+            np.linalg.norm(np.array(weights, dtype=np.float64) - np.array(global_weights, dtype=np.float64))
+        )
+        bias_delta_abs = abs(bias - global_bias)
 
         return InstitutionUpdate(
             institution_id=self.institution_id,
@@ -74,6 +81,8 @@ class InstitutionNode:
             weights=weights,
             bias=bias,
             local_loss=local_loss,
+            weight_delta_l2=weight_delta_l2,
+            bias_delta_abs=bias_delta_abs,
         )
 
 

@@ -69,5 +69,11 @@ Files:
 - `epoch`
 - `train_loss`
 - `val_loss`
-- `metrics` (local losses and per-institution evaluation)
+- `metrics` (local loss, sample counts, model delta magnitudes, and per-institution evaluation)
 - `learning_rate`
+
+`train.log` now includes one line per institution for each federated round, including:
+- local training loss
+- global-model evaluation loss/accuracy on that institution
+- number of local samples
+- model update magnitude (`weight_delta_l2`, `bias_delta_abs`)

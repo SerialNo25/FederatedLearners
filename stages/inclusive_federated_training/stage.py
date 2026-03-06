@@ -61,6 +61,7 @@ class InclusiveFederatedTrainingStage:
                 evaluate_institution(orchestrator.global_model, dataset) for dataset in datasets
             ]
             self._write_round_metrics(experiment_logger, round_index, updates, evaluations)
+            self._log_round_institution_details(experiment_logger, round_index, updates, evaluations)
             round_loss = sum(metric.loss for metric in evaluations) / len(evaluations)
             round_accuracy = sum(metric.accuracy for metric in evaluations) / len(evaluations)
             experiment_logger.info(
@@ -87,6 +88,11 @@ class InclusiveFederatedTrainingStage:
         evaluations: list[InstitutionMetrics],
     ) -> None:
         local_loss = {update.institution_id: update.local_loss for update in updates}
+        local_num_samples = {update.institution_id: update.num_samples for update in updates}
+        local_weight_delta_l2 = {
+            update.institution_id: update.weight_delta_l2 for update in updates
+        }
+        local_bias_delta_abs = {update.institution_id: update.bias_delta_abs for update in updates}
         eval_payload = {
             metric.institution_id: {"loss": metric.loss, "accuracy": metric.accuracy}
             for metric in evaluations
@@ -95,10 +101,43 @@ class InclusiveFederatedTrainingStage:
             "epoch": round_index,
             "train_loss": sum(local_loss.values()) / len(local_loss),
             "val_loss": sum(metric.loss for metric in evaluations) / len(evaluations),
-            "metrics": {"local_loss": local_loss, "institution_evaluation": eval_payload},
+            "metrics": {
+                "local_loss": local_loss,
+                "local_num_samples": local_num_samples,
+                "local_weight_delta_l2": local_weight_delta_l2,
+                "local_bias_delta_abs": local_bias_delta_abs,
+                "institution_evaluation": eval_payload,
+            },
             "learning_rate": None,
         }
         experiment_logger.write_metrics(step=f"round_{round_index}", values=line)
+
+    @staticmethod
+    def _log_round_institution_details(
+        experiment_logger: StageExperimentLogger,
+        round_index: int,
+        updates: list[InstitutionUpdate],
+        evaluations: list[InstitutionMetrics],
+    ) -> None:
+        evaluation_by_institution = {
+            evaluation.institution_id: evaluation for evaluation in evaluations
+        }
+        for update in updates:
+            evaluation = evaluation_by_institution[update.institution_id]
+            experiment_logger.info(
+                "round=%s institution=%s local_loss=%.6f eval_loss=%.6f eval_accuracy=%.6f "
+                "num_samples=%s weight_delta_l2=%.6f bias_delta_abs=%.6f"
+                % (
+                    round_index,
+                    update.institution_id,
+                    update.local_loss,
+                    evaluation.loss,
+                    evaluation.accuracy,
+                    update.num_samples,
+                    update.weight_delta_l2,
+                    update.bias_delta_abs,
+                )
+            )
 
     def _persist_artifacts(self, experiment_dir: Path, model: LogisticRegressionModel) -> None:
         (experiment_dir / "config.json").write_text(
