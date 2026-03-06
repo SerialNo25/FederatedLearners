@@ -41,8 +41,23 @@ class StageExperimentLogger:
     def _ensure_model_artifact(self) -> None:
         self.model_path.touch(exist_ok=True)
 
+    def debug(self, message: str) -> None:
+        self.logger.debug(message)
+
     def info(self, message: str) -> None:
         self.logger.info(message)
+
+    def warning(self, message: str) -> None:
+        self.logger.warning(message)
+
+    def error(self, message: str) -> None:
+        self.logger.error(message)
+
+    def exception(self, message: str) -> None:
+        self.logger.exception(message)
+
+    def critical(self, message: str) -> None:
+        self.logger.critical(message)
 
     def write_metrics(self, step: str, values: dict[str, Any]) -> None:
         record = {
