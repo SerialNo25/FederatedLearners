@@ -17,8 +17,9 @@ class InstitutionConfig(BaseModel):
 class InclusiveFederatedTrainingConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    experiment_name: str = "inclusive_federated_global_3_institutions"
+    experiment_name: str = "inclusive_federated_global"
     output_dir: Path = Path("dataset/experiments")
+    num_institutions: int = 3
     institutions: list[InstitutionConfig] = Field(default_factory=list)
     num_rounds: int = 5
     local_epochs: int = 3
@@ -36,6 +37,13 @@ class InclusiveFederatedTrainingConfig(BaseModel):
     def _validate_positive_training_counts(cls, value: int) -> int:
         if value < 1:
             raise ValueError("num_rounds and local_epochs must be >= 1")
+        return value
+
+    @field_validator("num_institutions")
+    @classmethod
+    def _validate_num_institutions(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("num_institutions must be >= 1")
         return value
 
     @field_validator("learning_rate")
@@ -69,8 +77,10 @@ class InclusiveFederatedTrainingConfig(BaseModel):
 
     @model_validator(mode="after")
     def _validate_institutions(self) -> "InclusiveFederatedTrainingConfig":
-        if len(self.institutions) != 3:
-            raise ValueError("Exactly 3 institutions must be configured")
+        if len(self.institutions) != self.num_institutions:
+            raise ValueError(
+                "Configured institutions count must match num_institutions"
+            )
 
         ids = [institution.institution_id for institution in self.institutions]
         if len(ids) != len(set(ids)):

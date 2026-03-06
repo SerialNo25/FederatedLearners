@@ -1,4 +1,4 @@
-"""Federated orchestration for three institutions using Flower FedProx aggregation."""
+"""Federated orchestration for n institutions using Flower FedProx aggregation."""
 
 from __future__ import annotations
 
@@ -83,8 +83,8 @@ class InstitutionNode:
         return float(np.sqrt(squares))
 
 
-class ThreeInstitutionFedProxOrchestrator:
-    """Coordinates three institution nodes with Flower's FedProx aggregation."""
+class FedProxOrchestrator:
+    """Coordinates institution nodes with Flower's FedProx aggregation."""
 
     def __init__(
         self,

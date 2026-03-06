@@ -1,4 +1,4 @@
-"""Stage orchestration for three-institution inclusive federated training."""
+"""Stage orchestration for n-institution inclusive federated training."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from domain.dataset.dataset_loader import InstitutionDataset, load_institution_d
 from domain.federated.fedprox_orchestrator import (
     InstitutionNode,
     InstitutionUpdate,
-    ThreeInstitutionFedProxOrchestrator,
+    FedProxOrchestrator,
 )
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.aggregation import weighted_mean
@@ -59,7 +59,7 @@ class InclusiveFederatedTrainingStage:
             )
             for dataset in datasets
         ]
-        orchestrator = ThreeInstitutionFedProxOrchestrator(
+        orchestrator = FedProxOrchestrator(
             institutions=institutions,
             initial_model=model,
             proximal_mu=self.config.proximal_mu,
