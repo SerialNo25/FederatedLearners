@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from domain.models.model_registry import MODEL_REGISTRY
+
 
 @dataclass(frozen=True)
 class InstitutionConfig:
@@ -21,6 +23,13 @@ class InclusiveFederatedTrainingConfig:
     local_epochs: int
     learning_rate: float
     proximal_mu: float
+    model_type: str
+    tabnet_decision_dim: int
+    tabnet_attention_dim: int
+    tabnet_steps: int
+    tabnet_relaxation_factor: float
+    tabnet_sparsity_weight: float
+    tabnet_device: str
 
     @classmethod
     def from_dict(cls, payload: dict) -> "InclusiveFederatedTrainingConfig":
@@ -39,6 +48,13 @@ class InclusiveFederatedTrainingConfig:
             local_epochs=int(payload.get("local_epochs", 3)),
             learning_rate=float(payload.get("learning_rate", 0.05)),
             proximal_mu=float(payload.get("proximal_mu", 0.001)),
+            model_type=str(payload.get("model_type", "logistic_regression")),
+            tabnet_decision_dim=int(payload.get("tabnet_decision_dim", 16)),
+            tabnet_attention_dim=int(payload.get("tabnet_attention_dim", 16)),
+            tabnet_steps=int(payload.get("tabnet_steps", 3)),
+            tabnet_relaxation_factor=float(payload.get("tabnet_relaxation_factor", 1.5)),
+            tabnet_sparsity_weight=float(payload.get("tabnet_sparsity_weight", 1e-4)),
+            tabnet_device=str(payload.get("tabnet_device", "cpu")),
         )
         config.validate()
         return config
@@ -55,6 +71,13 @@ class InclusiveFederatedTrainingConfig:
             raise ValueError("learning_rate must be > 0")
         if self.proximal_mu < 0:
             raise ValueError("proximal_mu must be >= 0")
+        if not MODEL_REGISTRY.has(self.model_type):
+            valid_model_types = ", ".join(MODEL_REGISTRY.list_model_types())
+            raise ValueError(
+                f"model_type must be one of: {valid_model_types}"
+            )
+        if self.tabnet_steps < 1:
+            raise ValueError("tabnet_steps must be >= 1")
 
     def to_dict(self) -> dict:
         return {
@@ -68,4 +91,11 @@ class InclusiveFederatedTrainingConfig:
             "local_epochs": self.local_epochs,
             "learning_rate": self.learning_rate,
             "proximal_mu": self.proximal_mu,
+            "model_type": self.model_type,
+            "tabnet_decision_dim": self.tabnet_decision_dim,
+            "tabnet_attention_dim": self.tabnet_attention_dim,
+            "tabnet_steps": self.tabnet_steps,
+            "tabnet_relaxation_factor": self.tabnet_relaxation_factor,
+            "tabnet_sparsity_weight": self.tabnet_sparsity_weight,
+            "tabnet_device": self.tabnet_device,
         }

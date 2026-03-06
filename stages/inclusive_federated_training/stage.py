@@ -10,7 +10,7 @@ from domain.dataset.dataset_loader import InstitutionDataset, load_institution_d
 from domain.federated.fedavg import InstitutionUpdate, run_federated_round
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
-from domain.models.basic_model import LogisticRegressionModel
+from domain.models.model_registry import MODEL_REGISTRY
 from domain.training.trainer import TrainingConfig
 from stages.inclusive_federated_training.config import InclusiveFederatedTrainingConfig
 
@@ -28,7 +28,8 @@ class InclusiveFederatedTrainingStage:
             stage_name="inclusive_federated_training",
         )
 
-        model = LogisticRegressionModel.initialize(len(datasets[0].features[0]))
+        model_factory = MODEL_REGISTRY.get_factory(self.config.model_type, self.config.to_dict())
+        model = model_factory(len(datasets[0].features[0]))
         training_config = TrainingConfig(
             learning_rate=self.config.learning_rate,
             local_epochs=self.config.local_epochs,
@@ -39,7 +40,7 @@ class InclusiveFederatedTrainingStage:
         experiment_logger.info(f"config={json.dumps(self.config.to_dict(), indent=2)}")
 
         for round_index in range(1, self.config.num_rounds + 1):
-            updates = run_federated_round(model, datasets, training_config)
+            updates = run_federated_round(model, datasets, training_config, model_factory)
             evaluations = [evaluate_institution(model, dataset) for dataset in datasets]
             self._write_round_metrics(experiment_logger, round_index, updates, evaluations)
             round_loss = sum(metric.loss for metric in evaluations) / len(evaluations)
@@ -81,10 +82,9 @@ class InclusiveFederatedTrainingStage:
         }
         experiment_logger.write_metrics(step=f"round_{round_index}", values=line)
 
-    def _persist_artifacts(self, experiment_dir: Path, model: LogisticRegressionModel) -> None:
+    def _persist_artifacts(self, experiment_dir: Path, model) -> None:
         (experiment_dir / "config.json").write_text(
             json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
         )
-        weights, bias = model.parameters()
-        payload = {"weights": weights, "bias": bias}
+        payload = model.parameters()
         (experiment_dir / "model.pt").write_text(json.dumps(payload), encoding="utf-8")
