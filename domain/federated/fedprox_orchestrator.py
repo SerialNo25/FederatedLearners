@@ -9,25 +9,11 @@ from typing import Any
 import numpy as np
 
 from domain.dataset.dataset_loader import InstitutionDataset
+from domain.federated.flower_adapter import LocalFitUpdate, build_fit_results
 from domain.training.trainer import TrainingConfig, train_local_model
 
 try:
-    from flwr.common import (
-        Code,
-        EvaluateIns,
-        EvaluateRes,
-        FitIns,
-        FitRes,
-        GetParametersIns,
-        GetParametersRes,
-        GetPropertiesIns,
-        GetPropertiesRes,
-        Parameters,
-        Status,
-        ndarrays_to_parameters,
-        parameters_to_ndarrays,
-    )
-    from flwr.server.client_proxy import ClientProxy
+    from flwr.common import Parameters, parameters_to_ndarrays
     from flwr.server.strategy import FedProx
 except ModuleNotFoundError as exc:  # pragma: no cover - handled at runtime
     raise RuntimeError(
@@ -97,43 +83,6 @@ class InstitutionNode:
         return float(np.sqrt(squares))
 
 
-class _LocalClientProxy(ClientProxy):
-    """Minimal Flower client proxy for local simulation aggregation APIs."""
-
-    def __init__(self, cid: str) -> None:
-        super().__init__(cid=cid)
-
-    def get_properties(
-        self,
-        ins: GetPropertiesIns,
-        timeout: float | None,
-        group_id: int | None,
-    ) -> GetPropertiesRes:
-        raise NotImplementedError("Local-only proxy does not expose get_properties")
-
-    def get_parameters(
-        self,
-        ins: GetParametersIns,
-        timeout: float | None,
-        group_id: int | None,
-    ) -> GetParametersRes:
-        raise NotImplementedError("Local-only proxy does not expose get_parameters")
-
-    def fit(self, ins: FitIns, timeout: float | None, group_id: int | None) -> FitRes:
-        raise NotImplementedError("Local-only proxy does not expose fit")
-
-    def evaluate(
-        self,
-        ins: EvaluateIns,
-        timeout: float | None,
-        group_id: int | None,
-    ) -> EvaluateRes:
-        raise NotImplementedError("Local-only proxy does not expose evaluate")
-
-    def reconnect(self, ins: Any, timeout: float | None, group_id: int | None) -> Any:
-        raise NotImplementedError("Local-only proxy does not expose reconnect")
-
-
 class ThreeInstitutionFedProxOrchestrator:
     """Coordinates three institution nodes with Flower's FedProx aggregation."""
 
@@ -152,20 +101,18 @@ class ThreeInstitutionFedProxOrchestrator:
         parameter_names = list(global_parameters.keys())
         updates = [institution.fit(global_parameters) for institution in self._institutions]
 
-        flower_results = [
-            (
-                _LocalClientProxy(update.institution_id),
-                FitRes(
-                    status=Status(code=Code.OK, message="local_fit_complete"),
-                    parameters=ndarrays_to_parameters(
-                        [np.array(update.parameters[name], dtype=np.float64) for name in parameter_names]
-                    ),
-                    num_examples=update.num_samples,
-                    metrics={"local_loss": update.local_loss},
-                ),
-            )
-            for update in updates
-        ]
+        flower_results = build_fit_results(
+            updates=[
+                LocalFitUpdate(
+                    institution_id=update.institution_id,
+                    num_samples=update.num_samples,
+                    parameters=update.parameters,
+                    local_loss=update.local_loss,
+                )
+                for update in updates
+            ],
+            parameter_names=parameter_names,
+        )
 
         aggregated_result = self._strategy.aggregate_fit(
             server_round=round_index,

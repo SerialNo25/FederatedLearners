@@ -15,6 +15,7 @@ The stage now models each institution similarly to a separately deployed client:
 
 - `InstitutionNode` (`domain/federated/fedprox_orchestrator.py`) encapsulates one bank dataset and performs local optimization.
 - `ThreeInstitutionFedProxOrchestrator` (`domain/federated/fedprox_orchestrator.py`) acts as the server-side coordinator.
+- `flower_adapter` (`domain/federated/flower_adapter.py`) isolates Flower proxy/result adaptation used for local simulation.
 - Aggregation is delegated to Flower's `FedProx` strategy via `aggregate_fit`, making federated behavior explicit and framework-aligned.
 
 ## Configuration
