@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
+from composition.run_inference import run_inference
 from composition.run_inclusive_federated_training import run_inclusive_federated_training
 
 StageRunner = Callable[[str | Path], Path]
@@ -31,5 +32,6 @@ class StageRegistry:
 
 def build_default_stage_registry() -> StageRegistry:
     registry = StageRegistry()
+    registry.register("inference", run_inference)
     registry.register("inclusive_federated_training", run_inclusive_federated_training)
     return registry
