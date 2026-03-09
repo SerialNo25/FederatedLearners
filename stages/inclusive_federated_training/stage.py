@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import torch
+
 from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
 from domain.federated.fedprox_orchestrator import (
     InstitutionNode,
@@ -157,7 +159,10 @@ class InclusiveFederatedTrainingStage:
         (experiment_dir / "config.json").write_text(
             json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
         )
-        (experiment_dir / "model.pt").write_text(
-            json.dumps(model.parameters()),
-            encoding="utf-8",
+        torch.save(
+            {
+                "model_type": self.config.model_type,
+                "parameters": model.parameters(),
+            },
+            experiment_dir / "model.pt",
         )

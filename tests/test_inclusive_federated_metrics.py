@@ -24,6 +24,19 @@ class InclusiveFederatedMetricsTests(unittest.TestCase):
 
         self.assertTrue(weighted_mean_used)
 
+    def test_stage_persists_model_with_torch_save(self):
+        source = Path("stages/inclusive_federated_training/stage.py").read_text()
+        module = ast.parse(source)
+
+        torch_save_used = False
+        for node in ast.walk(module):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                if isinstance(node.func.value, ast.Name) and node.func.value.id == "torch":
+                    if node.func.attr == "save":
+                        torch_save_used = True
+
+        self.assertTrue(torch_save_used)
+
 
 if __name__ == "__main__":
     unittest.main()
