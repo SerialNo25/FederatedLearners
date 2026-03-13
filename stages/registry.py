@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from typing import Protocol
 from pathlib import Path
 
 from composition.run_inference import run_inference
 from composition.run_federated_training import run_federated_training
 
-StageRunner = Callable[[str | Path], Path]
+class StageRunner(Protocol):
+    def __call__(self, config_path: str | Path) -> Path: ...
 
 
 class StageRegistry:

@@ -3,13 +3,42 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Mapping
-from typing import Any
+from typing import Protocol, TypeAlias, TypedDict
 
 from domain.models.basic_model import LogisticRegressionModel
 from domain.models.device_selector import DeviceSelector
+from domain.models.federated_model_protocol import FederatedModelProtocol
 
-ModelFactory = Callable[[int, Mapping[str, Any]], Any]
+
+class LogisticRegressionModelOptions(TypedDict):
+    model_type: str
+
+
+class TabNetModelOptions(TypedDict):
+    model_type: str
+    decision_dim: int
+    attention_dim: int
+    steps: int
+    relaxation_factor: float
+    sparsity_weight: float
+
+
+ModelOptions: TypeAlias = LogisticRegressionModelOptions | TabNetModelOptions
+
+
+class ModelBuilderProtocol(Protocol):
+    def __call__(
+        self,
+        n_features: int,
+        config: ModelOptions,
+    ) -> FederatedModelProtocol: ...
+
+
+class ModelFactoryProtocol(Protocol):
+    def __call__(self, n_features: int) -> FederatedModelProtocol: ...
+
+
+ModelFactory = ModelBuilderProtocol
 LOGGER = logging.getLogger(__name__)
 
 
@@ -28,7 +57,7 @@ class ModelRegistry:
     def list_model_types(self) -> list[str]:
         return sorted(self._factories.keys())
 
-    def get_factory(self, model_type: str, config: Mapping[str, Any]) -> Callable[[int], Any]:
+    def get_factory(self, model_type: str, config: ModelOptions) -> ModelFactoryProtocol:
         if model_type not in self._factories:
             raise ValueError(
                 f"Unknown model_type '{model_type}'. Registered model types: {', '.join(self.list_model_types())}"
@@ -41,12 +70,15 @@ class ModelRegistry:
 MODEL_REGISTRY = ModelRegistry()
 
 
-def _build_logistic_regression_model(n_features: int, config: Mapping[str, Any]) -> Any:
+def _build_logistic_regression_model(
+    n_features: int,
+    config: ModelOptions,
+) -> FederatedModelProtocol:
     del config
     return LogisticRegressionModel.initialize(n_features)
 
 
-def _build_tabnet_model(n_features: int, config: Mapping[str, Any]) -> Any:
+def _build_tabnet_model(n_features: int, config: ModelOptions) -> FederatedModelProtocol:
     from domain.models.tabnet_model import TabNetModel
 
     selector = DeviceSelector()

@@ -6,11 +6,10 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import torch
 
-from domain.models.model_registry import MODEL_REGISTRY
+from domain.models.model_registry import MODEL_REGISTRY, ModelOptions
 from domain.training.trainer import binary_cross_entropy
 
 
@@ -112,7 +111,7 @@ class InferenceService:
         self,
         *,
         model_type: str,
-        model_config: dict[str, Any],
+        model_config: ModelOptions,
         input_batch: InferenceBatch,
         checkpoint_parameters: dict[str, list[float]],
         num_features: int,

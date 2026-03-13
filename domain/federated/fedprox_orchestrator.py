@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
@@ -10,6 +9,7 @@ import numpy as np
 from domain.dataset.dataset_loader import InstitutionDataset
 from domain.federated.model_parameters import get_model_parameters
 from domain.models.federated_model_protocol import FederatedModelProtocol
+from domain.models.model_registry import ModelFactoryProtocol
 from domain.training.trainer import TrainingConfig, train_local_model
 
 
@@ -29,7 +29,7 @@ class InstitutionNode:
         self,
         dataset: InstitutionDataset,
         training_config: TrainingConfig,
-        model_factory: Callable[[int], FederatedModelProtocol],
+        model_factory: ModelFactoryProtocol,
     ) -> None:
         self.dataset = dataset
         self.training_config = training_config

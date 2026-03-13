@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
 
 from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
 from domain.federated.fedprox_orchestrator import (
@@ -16,6 +15,7 @@ from domain.federated.model_artifact_writer import ModelArtifactWriter
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import evaluate_institution
 from domain.models.federated_model_protocol import FederatedModelProtocol
+from domain.models.model_registry import ModelFactoryProtocol
 from domain.training.trainer import TrainingConfig
 from stages.federated_training.config import FederatedTrainingConfig
 from stages.federated_training.round_reporter import FederatedRoundReporter
@@ -26,7 +26,7 @@ class FederatedTrainingStage:
         self,
         config: FederatedTrainingConfig,
         experiment_logger: StageExperimentLogger,
-        model_factory: Callable[[int], FederatedModelProtocol],
+        model_factory: ModelFactoryProtocol,
         round_reporter: FederatedRoundReporter | None = None,
     ) -> None:
         self.config = config
