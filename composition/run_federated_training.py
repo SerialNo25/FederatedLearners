@@ -23,7 +23,10 @@ def run_federated_training(config_path: str | Path) -> Path:
         stage_name="federated_training",
     )
 
-    model_factory = MODEL_REGISTRY.get_factory(config.model_type, config.to_dict())
+    model_factory = MODEL_REGISTRY.get_factory(
+        config.model.model_type,
+        config.model.model_dump(mode="python"),
+    )
     stage = FederatedTrainingStage(
         config=config,
         experiment_logger=experiment_logger,
