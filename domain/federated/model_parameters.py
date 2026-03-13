@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+from domain.models.federated_model_protocol import FederatedModelProtocol
 
 
-def get_model_parameters(model: Any) -> dict[str, list[float]]:
+def get_model_parameters(model: FederatedModelProtocol) -> dict[str, list[float]]:
     """Return serializable model parameters for federated exchange."""
-    if hasattr(model, "federated_parameters"):
-        return model.federated_parameters()
-    return model.parameters()
-
+    return model.federated_parameters()

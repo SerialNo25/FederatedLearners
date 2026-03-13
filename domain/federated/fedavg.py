@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from domain.dataset.dataset_loader import InstitutionDataset
 from domain.federated.model_parameters import get_model_parameters
+from domain.models.federated_model_protocol import FederatedModelProtocol
 from domain.training.trainer import TrainingConfig, train_local_model
 
 
@@ -44,7 +45,7 @@ def aggregate_weighted(updates: list[InstitutionUpdate]) -> dict[str, list[float
 
 
 def run_federated_round(
-    global_model,
+    global_model: FederatedModelProtocol,
     institution_datasets: list[InstitutionDataset],
     training_config: TrainingConfig,
     local_model_factory,

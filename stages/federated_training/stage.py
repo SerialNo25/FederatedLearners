@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 
 from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
 from domain.federated.fedprox_orchestrator import (
@@ -15,6 +15,7 @@ from domain.federated.fedprox_orchestrator import (
 from domain.federated.model_artifact_writer import ModelArtifactWriter
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import evaluate_institution
+from domain.models.federated_model_protocol import FederatedModelProtocol
 from domain.training.trainer import TrainingConfig
 from stages.federated_training.config import FederatedTrainingConfig
 from stages.federated_training.round_reporter import FederatedRoundReporter
@@ -25,7 +26,7 @@ class FederatedTrainingStage:
         self,
         config: FederatedTrainingConfig,
         experiment_logger: StageExperimentLogger,
-        model_factory: Callable[[int], Any],
+        model_factory: Callable[[int], FederatedModelProtocol],
         round_reporter: FederatedRoundReporter | None = None,
     ) -> None:
         self.config = config
@@ -89,7 +90,7 @@ class FederatedTrainingStage:
         datasets: list[InstitutionDataset],
     ) -> None:
         for round_index in range(1, self.config.num_rounds + 1):
-            updates = orchestrator.run_round(round_index)
+            updates = orchestrator.run_round()
             evaluations = [
                 evaluate_institution(orchestrator.global_model, dataset) for dataset in datasets
             ]
@@ -126,7 +127,7 @@ class FederatedTrainingStage:
                     f"Institution dataset '{dataset.institution_id}' is empty; at least one row is required"
                 )
 
-    def _persist_artifacts(self, experiment_dir: Path, model: Any) -> None:
+    def _persist_artifacts(self, experiment_dir: Path, model: FederatedModelProtocol) -> None:
         (experiment_dir / "config.json").write_text(
             json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
         )
