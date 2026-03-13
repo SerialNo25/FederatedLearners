@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import torch
 from torch import Tensor, nn
 
@@ -81,13 +79,14 @@ class _TabNetBackbone(nn.Module):
         return logits, sparsity_penalty / self.n_steps
 
 
-@dataclass
-class TabNetModel:
-    """TabNet-style binary classifier with a small API for stage integration."""
+class TabNetModel(nn.Module):
+    """TabNet-style binary classifier with federated-parameter helpers."""
 
-    network: _TabNetBackbone
-    sparsity_weight: float = 1e-4
-    device: str = "cpu"
+    def __init__(self, network: _TabNetBackbone, sparsity_weight: float = 1e-4, device: str = "cpu") -> None:
+        super().__init__()
+        self.network = network
+        self.sparsity_weight = sparsity_weight
+        self.device = device
 
     @classmethod
     def initialize(
@@ -111,67 +110,26 @@ class TabNetModel:
         return cls(network=network, sparsity_weight=sparsity_weight, device=device)
 
     def predict_proba(self, features: list[list[float]]) -> list[float]:
-        self.network.eval()
+        self.eval()
         with torch.no_grad():
             inputs = torch.tensor(features, dtype=torch.float32, device=self.device)
-            logits, _ = self.network(inputs)
+            logits, _ = self(inputs)
             probabilities = torch.sigmoid(logits)
             return probabilities.detach().cpu().tolist()
 
-    def fit(
-        self,
-        features: list[list[float]],
-        labels: list[int],
-        learning_rate: float,
-        epochs: int,
-        global_parameters: dict[str, list[float]] | None = None,
-        proximal_mu: float = 0.0,
-    ) -> float:
-        self.network.train()
-        optimizer = torch.optim.Adam(self.network.parameters(), lr=learning_rate)
-        criterion = nn.BCEWithLogitsLoss()
+    def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
+        return self.network(x)
 
-        initial_state: dict[str, Tensor] = {}
-        if global_parameters is not None and proximal_mu > 0.0:
-            current_state = self.network.state_dict()
-            for name, tensor in current_state.items():
-                initial_state[name] = torch.tensor(
-                    global_parameters[name], dtype=tensor.dtype, device=tensor.device
-                ).reshape(tensor.shape)
-
-        inputs = torch.tensor(features, dtype=torch.float32, device=self.device)
-        targets = torch.tensor(labels, dtype=torch.float32, device=self.device)
-
-        final_loss = 0.0
-        for _ in range(epochs):
-            optimizer.zero_grad()
-            logits, sparsity_loss = self.network(inputs)
-            clf_loss = criterion(logits, targets)
-            total_loss = clf_loss + self.sparsity_weight * sparsity_loss
-
-            if initial_state:
-                prox_term = torch.tensor(0.0, device=self.device)
-                for name, parameter in self.network.named_parameters():
-                    prox_term = prox_term + torch.sum((parameter - initial_state[name]) ** 2)
-                total_loss = total_loss + 0.5 * proximal_mu * prox_term
-
-            total_loss.backward()
-            optimizer.step()
-            final_loss = float(total_loss.detach().cpu().item())
-
-        return final_loss
-
-    def parameters(self) -> dict[str, list[float]]:
-        state = self.network.state_dict()
+    def federated_parameters(self) -> dict[str, list[float]]:
+        state = self.state_dict()
         return {name: value.detach().cpu().flatten().tolist() for name, value in state.items()}
 
     def load_parameters(self, parameters: dict[str, list[float]]) -> None:
-        current_state = self.network.state_dict()
+        current_state = self.state_dict()
         restored: dict[str, Tensor] = {}
 
         for name, tensor in current_state.items():
             restored[name] = torch.tensor(
                 parameters[name], dtype=tensor.dtype, device=tensor.device
             ).reshape(tensor.shape)
-
-        self.network.load_state_dict(restored)
+        self.load_state_dict(restored)

@@ -155,6 +155,12 @@ class InclusiveFederatedTrainingStage:
                 )
             )
 
+    @staticmethod
+    def _model_parameters(model: Any) -> dict[str, list[float]]:
+        if hasattr(model, "federated_parameters"):
+            return model.federated_parameters()
+        return model.parameters()
+
     def _persist_artifacts(self, experiment_dir: Path, model: Any) -> None:
         (experiment_dir / "config.json").write_text(
             json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
@@ -162,7 +168,7 @@ class InclusiveFederatedTrainingStage:
         torch.save(
             {
                 "model_type": self.config.model_type,
-                "parameters": model.parameters(),
+                "parameters": self._model_parameters(model),
             },
             experiment_dir / "model.pt",
         )
