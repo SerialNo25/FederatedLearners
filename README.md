@@ -1,20 +1,38 @@
 # FederatedLearners
 
-## Run inclusive federated training
+## Run federated training
 
 ```bash
-python main.py inclusive_federated_training --config configs/inclusive_federated.toml
+python main.py federated_training --config configs/federated.toml
 ```
 
 Helper script:
 
 ```bash
-./scripts/run_inclusive_federated_training.sh configs/inclusive_federated.toml
+./scripts/run_federated_training.sh configs/federated.toml
 ```
 
 See stage documentation:
 
-- `docs/inclusive_federated_training_stage.md`
+- `docs/federated_training_stage.md`
+
+## Run inference
+
+```bash
+python main.py inference --config configs/inference.toml
+```
+
+Helper script:
+
+```bash
+./scripts/run_inference.sh configs/inference.toml
+```
+
+The inference stage reads input rows from a CSV file and can optionally use a label column (for example `Class`) to report inference quality metrics.
+
+See stage documentation:
+
+- `docs/inference_stage.md`
 
 ## Model options
 

@@ -1,12 +1,12 @@
-# Inclusive Federated Training Stage
+# Federated Training Stage
 
 ## Purpose
-The `inclusive_federated_training` stage simulates **N institutions** training a single global model with a clear client/server object model and Flower FedProx aggregation.
+The `federated_training` stage simulates **N institutions** training a single global model with a clear client/server object model and lightweight in-process FedProx orchestration.
 
 The stage follows the repository architecture:
 - CLI (`main.py`) selects the stage.
-- Composition root (`composition/run_inclusive_federated_training.py`) loads and validates config.
-- Stage (`stages/inclusive_federated_training/stage.py`) orchestrates data loading, institution node wiring, federated rounds, evaluation, and artifact persistence.
+- Composition root (`composition/run_federated_training.py`) loads and validates config.
+- Stage (`stages/federated_training/stage.py`) orchestrates data loading, institution node wiring, federated rounds, evaluation, and artifact persistence.
 - Core modules (`domain/*`) hold reusable model/training/evaluation logic.
 
 
@@ -15,11 +15,10 @@ The stage now models each institution similarly to a separately deployed client:
 
 - `InstitutionNode` (`domain/federated/fedprox_orchestrator.py`) encapsulates one bank dataset and performs local optimization.
 - `FedProxOrchestrator` (`domain/federated/fedprox_orchestrator.py`) acts as the server-side coordinator.
-- `flower_adapter` (`domain/federated/flower_adapter.py`) isolates Flower proxy/result adaptation used for local simulation.
-- Aggregation is delegated to Flower's `FedProx` strategy via `aggregate_fit`, making federated behavior explicit and framework-aligned.
+- Aggregation is performed directly in the orchestrator using sample-weighted parameter averaging, removing framework adapter overhead while preserving FedProx local updates.
 
 ## Configuration
-Use `configs/inclusive_federated.toml`:
+Use `configs/federated.toml`:
 
 - `experiment_name`
 - `output_dir`
@@ -54,12 +53,12 @@ Validation enforces:
 
 ## Execution
 ```bash
-python main.py inclusive_federated_training --config configs/inclusive_federated.toml
+python main.py federated_training --config configs/federated.toml
 ```
 
 Or via helper script:
 ```bash
-./scripts/run_inclusive_federated_training.sh configs/inclusive_federated.toml
+./scripts/run_federated_training.sh configs/federated.toml
 ```
 
 ## Outputs

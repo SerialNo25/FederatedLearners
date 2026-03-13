@@ -1,4 +1,4 @@
-"""Federated orchestration for n institutions using Flower FedProx aggregation."""
+"""Federated orchestration for n institutions using FedProx local training."""
 
 from __future__ import annotations
 
@@ -9,16 +9,7 @@ from typing import Any
 import numpy as np
 
 from domain.dataset.dataset_loader import InstitutionDataset
-from domain.federated.flower_adapter import LocalFitUpdate, build_fit_results
 from domain.training.trainer import TrainingConfig, train_local_model
-
-try:
-    from flwr.common import Parameters, parameters_to_ndarrays
-    from flwr.server.strategy import FedProx
-except ModuleNotFoundError as exc:  # pragma: no cover - handled at runtime
-    raise RuntimeError(
-        "Flower is required for federated training. Install dependencies with `pip install flwr`."
-    ) from exc
 
 
 @dataclass(frozen=True)
@@ -58,7 +49,7 @@ class InstitutionNode:
             config=self.training_config,
             global_parameters=global_parameters,
         )
-        local_parameters = local_model.parameters()
+        local_parameters = _get_model_parameters(local_model)
         parameter_delta_l2 = self._parameter_delta_l2(local_parameters, global_parameters)
 
         return InstitutionUpdate(
@@ -83,8 +74,14 @@ class InstitutionNode:
         return float(np.sqrt(squares))
 
 
+def _get_model_parameters(model: Any) -> dict[str, list[float]]:
+    if hasattr(model, "federated_parameters"):
+        return model.federated_parameters()
+    return model.parameters()
+
+
 class FedProxOrchestrator:
-    """Coordinates institution nodes with Flower's FedProx aggregation."""
+    """Coordinates institution nodes with FedProx-style local optimization and weighted averaging."""
 
     def __init__(
         self,
@@ -94,40 +91,16 @@ class FedProxOrchestrator:
     ) -> None:
         self._institutions = institutions
         self._global_model = initial_model
-        self._strategy = FedProx(proximal_mu=proximal_mu)
 
     def run_round(self, round_index: int) -> list[InstitutionUpdate]:
-        global_parameters = self._global_model.parameters()
+        global_parameters = _get_model_parameters(self._global_model)
         parameter_names = list(global_parameters.keys())
         updates = [institution.fit(global_parameters) for institution in self._institutions]
 
-        flower_results = build_fit_results(
-            updates=[
-                LocalFitUpdate(
-                    institution_id=update.institution_id,
-                    num_samples=update.num_samples,
-                    parameters=update.parameters,
-                    local_loss=update.local_loss,
-                )
-                for update in updates
-            ],
-            parameter_names=parameter_names,
-        )
-
-        aggregated_result = self._strategy.aggregate_fit(
-            server_round=round_index,
-            results=flower_results,
-            failures=[],
-        )
-        aggregated_parameters: Parameters | None = aggregated_result[0] if aggregated_result else None
-        if aggregated_parameters is None:
-            raise RuntimeError("FedProx aggregation produced no parameters")
-
-        aggregated_ndarrays = parameters_to_ndarrays(aggregated_parameters)
+        aggregated_parameters = self._aggregate_weighted_parameters(updates, parameter_names)
         self._global_model.load_parameters(
             {
-                name: values.tolist()
-                for name, values in zip(parameter_names, aggregated_ndarrays, strict=True)
+                name: aggregated_parameters[name].tolist() for name in parameter_names
             }
         )
 
@@ -136,3 +109,22 @@ class FedProxOrchestrator:
     @property
     def global_model(self) -> Any:
         return self._global_model
+
+    @staticmethod
+    def _aggregate_weighted_parameters(
+        updates: list[InstitutionUpdate],
+        parameter_names: list[str],
+    ) -> dict[str, np.ndarray]:
+        total_samples = sum(update.num_samples for update in updates)
+        if total_samples <= 0:
+            raise RuntimeError("FedProx aggregation requires at least one local sample")
+
+        aggregated = {
+            name: np.zeros(len(updates[0].parameters[name]), dtype=np.float64)
+            for name in parameter_names
+        }
+        for update in updates:
+            sample_weight = update.num_samples / total_samples
+            for name in parameter_names:
+                aggregated[name] += np.array(update.parameters[name], dtype=np.float64) * sample_weight
+        return aggregated

@@ -1,4 +1,4 @@
-"""Stage orchestration for n-institution inclusive federated training."""
+"""Stage orchestration for n-institution federated training."""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+import torch
 
 from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
 from domain.federated.fedprox_orchestrator import (
@@ -19,11 +21,11 @@ from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
 from domain.models.device_selector import DeviceSelector
 from domain.models.model_registry import MODEL_REGISTRY
 from domain.training.trainer import TrainingConfig
-from stages.inclusive_federated_training.config import InclusiveFederatedTrainingConfig
+from stages.federated_training.config import FederatedTrainingConfig
 
 
-class InclusiveFederatedTrainingStage:
-    def __init__(self, config: InclusiveFederatedTrainingConfig) -> None:
+class FederatedTrainingStage:
+    def __init__(self, config: FederatedTrainingConfig) -> None:
         self.config = config
 
     def execute(self) -> Path:
@@ -31,7 +33,7 @@ class InclusiveFederatedTrainingStage:
         experiment_dir = self.config.output_dir / self.config.experiment_name
         experiment_logger = StageExperimentLogger(
             experiment_dir=str(experiment_dir),
-            stage_name="inclusive_federated_training",
+            stage_name="federated_training",
         )
 
         model_config = self.config.to_dict()
@@ -153,11 +155,20 @@ class InclusiveFederatedTrainingStage:
                 )
             )
 
+    @staticmethod
+    def _model_parameters(model: Any) -> dict[str, list[float]]:
+        if hasattr(model, "federated_parameters"):
+            return model.federated_parameters()
+        return model.parameters()
+
     def _persist_artifacts(self, experiment_dir: Path, model: Any) -> None:
         (experiment_dir / "config.json").write_text(
             json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
         )
-        (experiment_dir / "model.pt").write_text(
-            json.dumps(model.parameters()),
-            encoding="utf-8",
+        torch.save(
+            {
+                "model_type": self.config.model_type,
+                "parameters": self._model_parameters(model),
+            },
+            experiment_dir / "model.pt",
         )
