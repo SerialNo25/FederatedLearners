@@ -149,7 +149,7 @@ class FederatedTrainingStage:
                 "local_parameter_delta_l2": local_parameter_delta_l2,
                 "institution_evaluation": eval_payload,
             },
-            "learning_rate": None,
+            "learning_rate": self.config.learning_rate,
         }
         self.experiment_logger.write_metrics(step=f"round_{round_index}", values=line)
 
