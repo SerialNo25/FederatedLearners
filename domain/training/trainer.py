@@ -7,6 +7,7 @@ import math
 
 import torch
 from torch import Tensor, nn
+from tqdm.auto import tqdm
 
 
 @dataclass(frozen=True)
@@ -73,7 +74,7 @@ def _train_torch_model(
     targets = torch.tensor(labels, dtype=torch.float32, device=model.device)
 
     final_loss = 0.0
-    for _ in range(config.local_epochs):
+    for _ in tqdm(range(config.local_epochs), desc="Local epochs", leave=False):
         optimizer.zero_grad()
         logits, sparsity_loss = model(inputs)
         clf_loss = criterion(logits, targets)
@@ -109,7 +110,7 @@ def _train_manual_model(
     if n_samples == 0:
         return 0.0
 
-    for _ in range(config.local_epochs):
+    for _ in tqdm(range(config.local_epochs), desc="Local epochs", leave=False):
         predictions = model.predict_proba(features)
         grad_weights = [0.0] * n_features
         grad_bias = 0.0
