@@ -41,7 +41,7 @@ class FedProxOrchestratorTests(unittest.TestCase):
 
     def test_run_round_rejects_zero_total_samples(self):
         model = _StubModel()
-        orchestrator = FedProxOrchestrator(institutions=[], initial_model=model, proximal_mu=0.1)
+        orchestrator = FedProxOrchestrator(institutions=[], initial_model=model)
 
         with self.assertRaises(RuntimeError):
             orchestrator.run_round(round_index=1)

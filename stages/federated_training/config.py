@@ -18,7 +18,7 @@ class FederatedTrainingConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     experiment_name: str = "federated_global"
-    output_dir: Path = Path("dataset/experiments")
+    output_dir: Path = Path("data/experiments")
     num_institutions: int
     institutions: list[InstitutionConfig] = Field(default_factory=list)
     num_rounds: int
