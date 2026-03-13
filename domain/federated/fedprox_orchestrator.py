@@ -87,7 +87,6 @@ class FedProxOrchestrator:
         self,
         institutions: list[InstitutionNode],
         initial_model: Any,
-        proximal_mu: float,
     ) -> None:
         self._institutions = institutions
         self._global_model = initial_model
