@@ -7,19 +7,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-import torch
-
 from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
 from domain.federated.fedprox_orchestrator import (
     InstitutionNode,
-    InstitutionUpdate,
     FedProxOrchestrator,
 )
+from domain.federated.model_artifact_writer import ModelArtifactWriter
 from domain.logging.experiment_logger import StageExperimentLogger
-from domain.metrics.aggregation import weighted_mean
-from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
+from domain.metrics.evaluation import evaluate_institution
 from domain.training.trainer import TrainingConfig
 from stages.federated_training.config import FederatedTrainingConfig
+from stages.federated_training.round_reporter import FederatedRoundReporter
 
 
 class FederatedTrainingStage:
@@ -28,10 +26,12 @@ class FederatedTrainingStage:
         config: FederatedTrainingConfig,
         experiment_logger: StageExperimentLogger,
         model_factory: Callable[[int], Any],
+        round_reporter: FederatedRoundReporter | None = None,
     ) -> None:
         self.config = config
         self.experiment_logger = experiment_logger
         self.model_factory = model_factory
+        self.round_reporter = round_reporter or FederatedRoundReporter()
 
     def execute(self) -> Path:
         datasets = self._load_datasets()
@@ -93,20 +93,19 @@ class FederatedTrainingStage:
             evaluations = [
                 evaluate_institution(orchestrator.global_model, dataset) for dataset in datasets
             ]
-            self._write_round_metrics(round_index, updates, evaluations)
-            self._log_round_institution_details(round_index, updates, evaluations)
-            self._log_round_summary(round_index, evaluations)
-
-    def _log_round_summary(
-        self,
-        round_index: int,
-        evaluations: list[InstitutionMetrics],
-    ) -> None:
-        round_loss = sum(metric.loss for metric in evaluations) / len(evaluations)
-        round_accuracy = sum(metric.accuracy for metric in evaluations) / len(evaluations)
-        self.experiment_logger.info(
-            f"round={round_index} mean_loss={round_loss:.6f} mean_accuracy={round_accuracy:.6f}"
-        )
+            round_report = self.round_reporter.build_report(
+                round_index=round_index,
+                updates=updates,
+                evaluations=evaluations,
+                learning_rate=self.config.learning_rate,
+            )
+            self.experiment_logger.write_metrics(
+                step=f"round_{round_index}",
+                values=round_report.metrics_payload,
+            )
+            for line in round_report.institution_lines:
+                self.experiment_logger.info(line)
+            self.experiment_logger.info(round_report.summary_line)
 
     def _load_datasets(self) -> list[InstitutionDataset]:
         return [
@@ -127,74 +126,12 @@ class FederatedTrainingStage:
                     f"Institution dataset '{dataset.institution_id}' is empty; at least one row is required"
                 )
 
-    def _write_round_metrics(
-        self,
-        round_index: int,
-        updates: list[InstitutionUpdate],
-        evaluations: list[InstitutionMetrics],
-    ) -> None:
-        local_loss = {update.institution_id: update.local_loss for update in updates}
-        local_num_samples = {update.institution_id: update.num_samples for update in updates}
-        local_parameter_delta_l2 = {
-            update.institution_id: update.parameter_delta_l2 for update in updates
-        }
-        eval_payload = {
-            metric.institution_id: {"loss": metric.loss, "accuracy": metric.accuracy}
-            for metric in evaluations
-        }
-        line = {
-            "epoch": round_index,
-            "train_loss": weighted_mean(list(local_loss.values()), list(local_num_samples.values())),
-            "val_loss": sum(metric.loss for metric in evaluations) / len(evaluations),
-            "metrics": {
-                "local_loss": local_loss,
-                "local_num_samples": local_num_samples,
-                "local_parameter_delta_l2": local_parameter_delta_l2,
-                "institution_evaluation": eval_payload,
-            },
-            "learning_rate": self.config.learning_rate,
-        }
-        self.experiment_logger.write_metrics(step=f"round_{round_index}", values=line)
-
-    def _log_round_institution_details(
-        self,
-        round_index: int,
-        updates: list[InstitutionUpdate],
-        evaluations: list[InstitutionMetrics],
-    ) -> None:
-        evaluation_by_institution = {
-            evaluation.institution_id: evaluation for evaluation in evaluations
-        }
-        for update in updates:
-            evaluation = evaluation_by_institution[update.institution_id]
-            self.experiment_logger.info(
-                "round=%s institution=%s local_loss=%.6f eval_loss=%.6f eval_accuracy=%.6f "
-                "num_samples=%s parameter_delta_l2=%.6f"
-                % (
-                    round_index,
-                    update.institution_id,
-                    update.local_loss,
-                    evaluation.loss,
-                    evaluation.accuracy,
-                    update.num_samples,
-                    update.parameter_delta_l2,
-                )
-            )
-
-    @staticmethod
-    def _model_parameters(model: Any) -> dict[str, list[float]]:
-        if hasattr(model, "federated_parameters"):
-            return model.federated_parameters()
-        return model.parameters()
-
     def _persist_artifacts(self, experiment_dir: Path, model: Any) -> None:
         (experiment_dir / "config.json").write_text(
             json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
         )
-        torch.save(
-            {
-                "model_type": self.config.model_type,
-                "parameters": self._model_parameters(model),
-            },
-            experiment_dir / "model.pt",
+        ModelArtifactWriter.write_model_checkpoint(
+            checkpoint_path=experiment_dir / "model.pt",
+            model_type=self.config.model_type,
+            model=model,
         )
