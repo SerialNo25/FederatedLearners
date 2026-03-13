@@ -25,7 +25,6 @@ class InferenceConfig(BaseModel):
     tabnet_steps: int = 3
     tabnet_relaxation_factor: float = 1.5
     tabnet_sparsity_weight: float = 1e-4
-    tabnet_device: str | None = None
 
     @field_validator("model_type")
     @classmethod

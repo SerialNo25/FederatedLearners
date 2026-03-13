@@ -11,7 +11,6 @@ from domain.inference.inference_service import (
     InferenceService,
 )
 from domain.logging.experiment_logger import StageExperimentLogger
-from domain.models.device_selector import DeviceSelector
 from stages.inference.config import InferenceConfig
 
 
@@ -42,13 +41,6 @@ class InferenceStage:
         )
 
         model_config = self.config.to_dict()
-        if self.config.model_type == "tabnet" and not self.config.tabnet_device:
-            selector = DeviceSelector()
-            model_config["tabnet_device"] = selector.select_best_device()
-            logger.info(
-                "tabnet_device_selection selected=%s available=%s"
-                % (model_config["tabnet_device"], ",".join(selector.available_devices()))
-            )
 
         checkpoint_parameters = self.checkpoint_loader.load(
             checkpoint_path=self.config.checkpoint_path,
@@ -61,6 +53,9 @@ class InferenceStage:
             checkpoint_parameters=checkpoint_parameters,
             num_features=len(self.config.feature_columns),
         )
+
+        if metrics.get("device"):
+            logger.info(f"tabnet_device_selection selected={metrics['device']}")
 
         outputs = {
             "checkpoint_path": str(self.config.checkpoint_path),

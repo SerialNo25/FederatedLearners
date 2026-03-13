@@ -116,15 +116,16 @@ class InferenceService:
         input_batch: InferenceBatch,
         checkpoint_parameters: dict[str, list[float]],
         num_features: int,
-    ) -> tuple[list[float], dict[str, float | int | None]]:
+    ) -> tuple[list[float], dict[str, float | int | str | None]]:
         model_factory = MODEL_REGISTRY.get_factory(model_type, model_config)
         model = model_factory(num_features)
         model.load_parameters(checkpoint_parameters)
         predictions = model.predict_proba(input_batch.features)
 
-        metrics: dict[str, float | int | None] = {
+        metrics: dict[str, float | int | str | None] = {
             "num_samples": len(input_batch.features),
             "mean_prediction": sum(predictions) / len(predictions),
+            "device": getattr(model, "device", None),
         }
         if input_batch.labels is not None:
             predicted_labels = [1 if value >= 0.5 else 0 for value in predictions]
