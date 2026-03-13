@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 
 from domain.dataset.dataset_loader import InstitutionDataset
+from domain.federated.model_parameters import get_model_parameters
 from domain.training.trainer import TrainingConfig, train_local_model
 
 
@@ -49,7 +50,7 @@ class InstitutionNode:
             config=self.training_config,
             global_parameters=global_parameters,
         )
-        local_parameters = _get_model_parameters(local_model)
+        local_parameters = get_model_parameters(local_model)
         parameter_delta_l2 = self._parameter_delta_l2(local_parameters, global_parameters)
 
         return InstitutionUpdate(
@@ -74,12 +75,6 @@ class InstitutionNode:
         return float(np.sqrt(squares))
 
 
-def _get_model_parameters(model: Any) -> dict[str, list[float]]:
-    if hasattr(model, "federated_parameters"):
-        return model.federated_parameters()
-    return model.parameters()
-
-
 class FedProxOrchestrator:
     """Coordinates institution nodes with FedProx-style local optimization and weighted averaging."""
 
@@ -92,7 +87,7 @@ class FedProxOrchestrator:
         self._global_model = initial_model
 
     def run_round(self, round_index: int) -> list[InstitutionUpdate]:
-        global_parameters = _get_model_parameters(self._global_model)
+        global_parameters = get_model_parameters(self._global_model)
         parameter_names = list(global_parameters.keys())
         updates = [institution.fit(global_parameters) for institution in self._institutions]
 
