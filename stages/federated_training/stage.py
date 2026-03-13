@@ -48,6 +48,9 @@ class FederatedTrainingStage:
         datasets: list[InstitutionDataset],
     ) -> tuple[FedProxOrchestrator, list[InstitutionNode]]:
         model = self.model_factory(len(datasets[0].features[0]))
+        model_device = getattr(model, "device", None)
+        if model_device is not None:
+            self.experiment_logger.info(f"tabnet_device_selection selected={model_device}")
         training_config = TrainingConfig(
             learning_rate=self.config.learning_rate,
             local_epochs=self.config.local_epochs,

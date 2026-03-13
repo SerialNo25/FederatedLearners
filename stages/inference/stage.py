@@ -54,6 +54,9 @@ class InferenceStage:
             num_features=len(self.config.feature_columns),
         )
 
+        if metrics.get("device"):
+            logger.info(f"tabnet_device_selection selected={metrics['device']}")
+
         outputs = {
             "checkpoint_path": str(self.config.checkpoint_path),
             "input_data_path": str(self.config.input_data_path),

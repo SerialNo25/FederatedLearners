@@ -40,6 +40,7 @@ class InferenceStageArchitectureTests(unittest.TestCase):
         self.assertFalse(has_csv_usage)
         self.assertFalse(uses_device_selector)
         self.assertTrue(all(service_calls.values()))
+        self.assertIn("tabnet_device_selection selected=", source)
 
     def test_inference_domain_service_handles_csv_checkpoint_and_metrics(self):
         source = Path("domain/inference/inference_service.py").read_text(encoding="utf-8")
