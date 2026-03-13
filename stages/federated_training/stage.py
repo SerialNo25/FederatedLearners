@@ -31,22 +31,26 @@ class FederatedTrainingStage:
     def execute(self) -> Path:
         datasets = self._load_datasets()
         experiment_dir = self.config.output_dir / self.config.experiment_name
-        experiment_logger = StageExperimentLogger(
+        experiment_logger = self._create_logger(experiment_dir)
+        orchestrator, institutions = self._build_orchestrator(datasets, experiment_logger)
+        self._log_experiment_start(experiment_logger, institutions)
+        self._run_training_rounds(orchestrator, datasets, experiment_logger)
+        self._persist_artifacts(experiment_dir, orchestrator.global_model)
+        return experiment_dir
+
+    @staticmethod
+    def _create_logger(experiment_dir: Path) -> StageExperimentLogger:
+        return StageExperimentLogger(
             experiment_dir=str(experiment_dir),
             stage_name="federated_training",
         )
 
-        model_config = self.config.to_dict()
-        if self.config.model_type == "tabnet":
-            selector = DeviceSelector()
-            selected_device = selector.select_best_device()
-            model_config["tabnet_device"] = selected_device
-            experiment_logger.info(
-                "tabnet_device_selection selected=%s available=%s"
-                % (selected_device, ",".join(selector.available_devices()))
-            )
-
-        model_factory = MODEL_REGISTRY.get_factory(self.config.model_type, model_config)
+    def _build_orchestrator(
+        self,
+        datasets: list[InstitutionDataset],
+        experiment_logger: StageExperimentLogger,
+    ) -> tuple[FedProxOrchestrator, list[InstitutionNode]]:
+        model_factory = self._build_model_factory(experiment_logger)
         model = model_factory(len(datasets[0].features[0]))
         training_config = TrainingConfig(
             learning_rate=self.config.learning_rate,
@@ -61,12 +65,32 @@ class FederatedTrainingStage:
             )
             for dataset in datasets
         ]
-        orchestrator = FedProxOrchestrator(
-            institutions=institutions,
-            initial_model=model,
-            proximal_mu=self.config.proximal_mu,
+        return (
+            FedProxOrchestrator(
+                institutions=institutions,
+                initial_model=model,
+                proximal_mu=self.config.proximal_mu,
+            ),
+            institutions,
         )
 
+    def _build_model_factory(self, experiment_logger: StageExperimentLogger) -> Any:
+        model_config = self.config.to_dict()
+        if self.config.model_type == "tabnet":
+            selector = DeviceSelector()
+            selected_device = selector.select_best_device()
+            model_config["tabnet_device"] = selected_device
+            experiment_logger.info(
+                "tabnet_device_selection selected=%s available=%s"
+                % (selected_device, ",".join(selector.available_devices()))
+            )
+        return MODEL_REGISTRY.get_factory(self.config.model_type, model_config)
+
+    def _log_experiment_start(
+        self,
+        experiment_logger: StageExperimentLogger,
+        institutions: list[InstitutionNode],
+    ) -> None:
         experiment_logger.info(f"start_time={datetime.now(timezone.utc).isoformat()}")
         experiment_logger.info(f"config={json.dumps(self.config.to_dict(), indent=2)}")
         experiment_logger.info(
@@ -74,6 +98,12 @@ class FederatedTrainingStage:
             + json.dumps([institution.institution_id for institution in institutions])
         )
 
+    def _run_training_rounds(
+        self,
+        orchestrator: FedProxOrchestrator,
+        datasets: list[InstitutionDataset],
+        experiment_logger: StageExperimentLogger,
+    ) -> None:
         for round_index in range(1, self.config.num_rounds + 1):
             updates = orchestrator.run_round(round_index)
             evaluations = [
@@ -81,14 +111,19 @@ class FederatedTrainingStage:
             ]
             self._write_round_metrics(experiment_logger, round_index, updates, evaluations)
             self._log_round_institution_details(experiment_logger, round_index, updates, evaluations)
-            round_loss = sum(metric.loss for metric in evaluations) / len(evaluations)
-            round_accuracy = sum(metric.accuracy for metric in evaluations) / len(evaluations)
-            experiment_logger.info(
-                f"round={round_index} mean_loss={round_loss:.6f} mean_accuracy={round_accuracy:.6f}"
-            )
+            self._log_round_summary(experiment_logger, round_index, evaluations)
 
-        self._persist_artifacts(experiment_dir, orchestrator.global_model)
-        return experiment_dir
+    @staticmethod
+    def _log_round_summary(
+        experiment_logger: StageExperimentLogger,
+        round_index: int,
+        evaluations: list[InstitutionMetrics],
+    ) -> None:
+        round_loss = sum(metric.loss for metric in evaluations) / len(evaluations)
+        round_accuracy = sum(metric.accuracy for metric in evaluations) / len(evaluations)
+        experiment_logger.info(
+            f"round={round_index} mean_loss={round_loss:.6f} mean_accuracy={round_accuracy:.6f}"
+        )
 
     def _load_datasets(self) -> list[InstitutionDataset]:
         return [
