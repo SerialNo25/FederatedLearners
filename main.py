@@ -18,8 +18,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--config",
-        required=True,
         help="Path to TOML stage configuration file",
+    )
+    parser.add_argument(
+        "--preset",
+        help="Named stage configuration preset",
     )
     return parser.parse_args()
 
@@ -28,7 +31,12 @@ def main() -> None:
     args = parse_args()
     registry = build_default_stage_registry()
     runner = registry.get(args.stage)
-    output_dir = runner(args.config)
+    config_path = registry.resolve_config_path(
+        args.stage,
+        config_path=args.config,
+        preset_name=args.preset,
+    )
+    output_dir = runner(config_path)
     print(f"Stage '{args.stage}' completed: {output_dir}")
 
 

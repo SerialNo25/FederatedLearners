@@ -3,13 +3,20 @@
 ## Run federated training
 
 ```bash
-python main.py federated_training --config configs/federated.toml
+python main.py federated_training --preset default
 ```
 
-Helper script:
+Helper scripts:
 
 ```bash
-./scripts/run_federated_training.sh configs/federated.toml
+./scripts/run_federated_training.sh
+./scripts/run_federated_training_banks_1_2.sh
+```
+
+You can still pass an explicit config path when needed:
+
+```bash
+python main.py federated_training --config configs/federated.toml
 ```
 
 See stage documentation:
@@ -19,13 +26,13 @@ See stage documentation:
 ## Run inference
 
 ```bash
-python main.py inference --config configs/inference.toml
+python main.py inference --preset default
 ```
 
 Helper script:
 
 ```bash
-./scripts/run_inference.sh configs/inference.toml
+./scripts/run_inference.sh
 ```
 
 The inference stage reads input rows from a CSV file and can optionally use a label column (for example `Class`) to report inference quality metrics.
