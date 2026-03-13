@@ -28,6 +28,9 @@ class LogisticRegressionModel:
     def parameters(self) -> dict[str, list[float]]:
         return {"weights": self.weights[:], "bias": [float(self.bias)]}
 
+    def federated_parameters(self) -> dict[str, list[float]]:
+        return self.parameters()
+
     def load_parameters(self, parameters: dict[str, list[float]]) -> None:
         self.weights = [float(weight) for weight in parameters["weights"]]
         self.bias = float(parameters["bias"][0])

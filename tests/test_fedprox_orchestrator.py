@@ -7,7 +7,7 @@ class _StubModel:
     def __init__(self):
         self._params = {"weights": [0.0, 0.0], "bias": [0.0]}
 
-    def parameters(self):
+    def federated_parameters(self):
         return self._params
 
     def load_parameters(self, params):
@@ -44,7 +44,7 @@ class FedProxOrchestratorTests(unittest.TestCase):
         orchestrator = FedProxOrchestrator(institutions=[], initial_model=model)
 
         with self.assertRaises(RuntimeError):
-            orchestrator.run_round(round_index=1)
+            orchestrator.run_round()
 
 
 if __name__ == "__main__":

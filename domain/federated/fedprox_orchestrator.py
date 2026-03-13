@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 
 from domain.dataset.dataset_loader import InstitutionDataset
 from domain.federated.model_parameters import get_model_parameters
+from domain.models.federated_model_protocol import FederatedModelProtocol
 from domain.training.trainer import TrainingConfig, train_local_model
 
 
@@ -29,7 +29,7 @@ class InstitutionNode:
         self,
         dataset: InstitutionDataset,
         training_config: TrainingConfig,
-        model_factory: Callable[[int], Any],
+        model_factory: Callable[[int], FederatedModelProtocol],
     ) -> None:
         self.dataset = dataset
         self.training_config = training_config
@@ -81,12 +81,12 @@ class FedProxOrchestrator:
     def __init__(
         self,
         institutions: list[InstitutionNode],
-        initial_model: Any,
+        initial_model: FederatedModelProtocol,
     ) -> None:
         self._institutions = institutions
         self._global_model = initial_model
 
-    def run_round(self, round_index: int) -> list[InstitutionUpdate]:
+    def run_round(self) -> list[InstitutionUpdate]:
         global_parameters = get_model_parameters(self._global_model)
         parameter_names = list(global_parameters.keys())
         updates = [institution.fit(global_parameters) for institution in self._institutions]
@@ -101,7 +101,7 @@ class FedProxOrchestrator:
         return updates
 
     @property
-    def global_model(self) -> Any:
+    def global_model(self) -> FederatedModelProtocol:
         return self._global_model
 
     @staticmethod
