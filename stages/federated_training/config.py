@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -12,6 +13,32 @@ from domain.models.model_registry import MODEL_REGISTRY
 class InstitutionConfig(BaseModel):
     institution_id: str
     dataset_path: Path
+
+
+class LogisticRegressionModelConfig(BaseModel):
+    model_type: Literal["logistic_regression"]
+
+
+class TabNetModelConfig(BaseModel):
+    model_type: Literal["tabnet"]
+    decision_dim: int = 16
+    attention_dim: int = 16
+    steps: int = 3
+    relaxation_factor: float = 1.5
+    sparsity_weight: float = 1e-4
+
+    @field_validator("steps")
+    @classmethod
+    def _validate_tabnet_steps(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("steps must be >= 1")
+        return value
+
+
+ModelConfig = Annotated[
+    LogisticRegressionModelConfig | TabNetModelConfig,
+    Field(discriminator="model_type"),
+]
 
 
 class FederatedTrainingConfig(BaseModel):
@@ -25,12 +52,7 @@ class FederatedTrainingConfig(BaseModel):
     local_epochs: int
     learning_rate: float
     proximal_mu: float
-    model_type: str
-    tabnet_decision_dim: int
-    tabnet_attention_dim: int
-    tabnet_steps: int
-    tabnet_relaxation_factor: float
-    tabnet_sparsity_weight: float
+    model: ModelConfig
 
     @field_validator("num_rounds", "local_epochs")
     @classmethod
@@ -60,17 +82,10 @@ class FederatedTrainingConfig(BaseModel):
             raise ValueError("proximal_mu must be >= 0")
         return value
 
-    @field_validator("tabnet_steps")
+    @field_validator("model")
     @classmethod
-    def _validate_tabnet_steps(cls, value: int) -> int:
-        if value < 1:
-            raise ValueError("tabnet_steps must be >= 1")
-        return value
-
-    @field_validator("model_type")
-    @classmethod
-    def _validate_model_type(cls, value: str) -> str:
-        if not MODEL_REGISTRY.has(value):
+    def _validate_model_type(cls, value: ModelConfig) -> ModelConfig:
+        if not MODEL_REGISTRY.has(value.model_type):
             valid_model_types = ", ".join(MODEL_REGISTRY.list_model_types())
             raise ValueError(f"model_type must be one of: {valid_model_types}")
         return value

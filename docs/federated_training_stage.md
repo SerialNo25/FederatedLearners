@@ -31,13 +31,14 @@ Both configs expose the same fields:
 - `local_epochs`
 - `learning_rate`
 - `proximal_mu`
-- `model_type` (must match a registered model in `domain/models/model_registry.py`)
-- TabNet options (used when `model_type = "tabnet"`):
-  - `tabnet_decision_dim`
-  - `tabnet_attention_dim`
-  - `tabnet_steps`
-  - `tabnet_relaxation_factor`
-  - `tabnet_sparsity_weight`
+- `[model]` (discriminated model configuration)
+  - `model_type` (must match a registered model in `domain/models/model_registry.py`)
+  - TabNet options (used when `model_type = "tabnet"`):
+    - `decision_dim`
+    - `attention_dim`
+    - `steps`
+    - `relaxation_factor`
+    - `sparsity_weight`
 - Device is auto-selected at runtime by priority: `cuda > mps > cpu`
 - `num_institutions` (must be >= 1 and match the number of `[[institutions]]` entries)
 - `[[institutions]]`

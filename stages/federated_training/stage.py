@@ -133,6 +133,6 @@ class FederatedTrainingStage:
         )
         ModelArtifactWriter.write_model_checkpoint(
             checkpoint_path=experiment_dir / "model.pt",
-            model_type=self.config.model_type,
+            model_type=self.config.model.model_type,
             model=model,
         )

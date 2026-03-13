@@ -59,11 +59,11 @@ def _build_tabnet_model(n_features: int, config: Mapping[str, Any]) -> Any:
     )
     return TabNetModel.initialize(
         n_features=n_features,
-        decision_dim=int(config.get("tabnet_decision_dim", 16)),
-        attention_dim=int(config.get("tabnet_attention_dim", 16)),
-        n_steps=int(config.get("tabnet_steps", 3)),
-        relaxation_factor=float(config.get("tabnet_relaxation_factor", 1.5)),
-        sparsity_weight=float(config.get("tabnet_sparsity_weight", 1e-4)),
+        decision_dim=int(config.get("decision_dim", 16)),
+        attention_dim=int(config.get("attention_dim", 16)),
+        n_steps=int(config.get("steps", 3)),
+        relaxation_factor=float(config.get("relaxation_factor", 1.5)),
+        sparsity_weight=float(config.get("sparsity_weight", 1e-4)),
         device=device,
     )
 
