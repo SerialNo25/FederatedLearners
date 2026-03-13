@@ -5,13 +5,13 @@ import unittest
 from domain.metrics.aggregation import weighted_mean
 
 
-class InclusiveFederatedMetricsTests(unittest.TestCase):
+class FederatedMetricsTests(unittest.TestCase):
     def test_weighted_mean_uses_sample_counts(self):
         mean = weighted_mean(values=[0.9, 0.3], weights=[1, 9])
         self.assertAlmostEqual(mean, 0.36)
 
     def test_stage_metrics_compute_weighted_train_loss(self):
-        source = Path("stages/inclusive_federated_training/stage.py").read_text()
+        source = Path("stages/federated_training/stage.py").read_text()
         module = ast.parse(source)
 
         weighted_mean_used = False
@@ -25,7 +25,7 @@ class InclusiveFederatedMetricsTests(unittest.TestCase):
         self.assertTrue(weighted_mean_used)
 
     def test_stage_persists_model_with_torch_save(self):
-        source = Path("stages/inclusive_federated_training/stage.py").read_text()
+        source = Path("stages/federated_training/stage.py").read_text()
         module = ast.parse(source)
 
         torch_save_used = False

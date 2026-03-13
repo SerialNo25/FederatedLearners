@@ -1,4 +1,4 @@
-"""Stage orchestration for n-institution inclusive federated training."""
+"""Stage orchestration for n-institution federated training."""
 
 from __future__ import annotations
 
@@ -21,11 +21,11 @@ from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
 from domain.models.device_selector import DeviceSelector
 from domain.models.model_registry import MODEL_REGISTRY
 from domain.training.trainer import TrainingConfig
-from stages.inclusive_federated_training.config import InclusiveFederatedTrainingConfig
+from stages.federated_training.config import FederatedTrainingConfig
 
 
-class InclusiveFederatedTrainingStage:
-    def __init__(self, config: InclusiveFederatedTrainingConfig) -> None:
+class FederatedTrainingStage:
+    def __init__(self, config: FederatedTrainingConfig) -> None:
         self.config = config
 
     def execute(self) -> Path:
@@ -33,7 +33,7 @@ class InclusiveFederatedTrainingStage:
         experiment_dir = self.config.output_dir / self.config.experiment_name
         experiment_logger = StageExperimentLogger(
             experiment_dir=str(experiment_dir),
-            stage_name="inclusive_federated_training",
+            stage_name="federated_training",
         )
 
         model_config = self.config.to_dict()
