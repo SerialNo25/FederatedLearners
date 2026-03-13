@@ -42,6 +42,12 @@ def aggregate_weighted(updates: list[InstitutionUpdate]) -> dict[str, list[float
     return {name: [value / total_samples for value in values] for name, values in weighted_sum.items()}
 
 
+def _get_model_parameters(model) -> dict[str, list[float]]:
+    if hasattr(model, "federated_parameters"):
+        return model.federated_parameters()
+    return model.parameters()
+
+
 def run_federated_round(
     global_model,
     institution_datasets: list[InstitutionDataset],
@@ -49,7 +55,7 @@ def run_federated_round(
     local_model_factory,
 ) -> list[InstitutionUpdate]:
     updates: list[InstitutionUpdate] = []
-    global_params = global_model.parameters()
+    global_params = _get_model_parameters(global_model)
 
     for dataset in institution_datasets:
         local_model = local_model_factory(len(dataset.features[0]))
@@ -65,7 +71,7 @@ def run_federated_round(
             InstitutionUpdate(
                 institution_id=dataset.institution_id,
                 num_samples=len(dataset.labels),
-                parameters=local_model.parameters(),
+                parameters=_get_model_parameters(local_model),
                 local_loss=local_loss,
             )
         )
