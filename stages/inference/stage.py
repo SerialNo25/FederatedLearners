@@ -2,22 +2,31 @@
 
 from __future__ import annotations
 
-import csv
 import json
 from pathlib import Path
 
-import torch
-
+from domain.inference.inference_service import (
+    CheckpointParameterLoader,
+    InferenceDataLoader,
+    InferenceService,
+)
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.models.device_selector import DeviceSelector
-from domain.models.model_registry import MODEL_REGISTRY
-from domain.training.trainer import binary_cross_entropy
 from stages.inference.config import InferenceConfig
 
 
 class InferenceStage:
-    def __init__(self, config: InferenceConfig) -> None:
+    def __init__(
+        self,
+        config: InferenceConfig,
+        inference_service: InferenceService,
+        data_loader: InferenceDataLoader,
+        checkpoint_loader: CheckpointParameterLoader,
+    ) -> None:
         self.config = config
+        self.inference_service = inference_service
+        self.data_loader = data_loader
+        self.checkpoint_loader = checkpoint_loader
 
     def execute(self) -> Path:
         experiment_dir = self.config.output_dir / self.config.experiment_name
@@ -26,7 +35,11 @@ class InferenceStage:
             stage_name="inference",
         )
 
-        features, labels = self._load_input_rows()
+        input_batch = self.data_loader.load_csv(
+            input_data_path=self.config.input_data_path,
+            feature_columns=self.config.feature_columns,
+            label_column=self.config.label_column,
+        )
 
         model_config = self.config.to_dict()
         if self.config.model_type == "tabnet" and not self.config.tabnet_device:
@@ -37,22 +50,17 @@ class InferenceStage:
                 % (model_config["tabnet_device"], ",".join(selector.available_devices()))
             )
 
-        model_factory = MODEL_REGISTRY.get_factory(self.config.model_type, model_config)
-        model = model_factory(len(self.config.feature_columns))
-
-        checkpoint_parameters = self._load_checkpoint_parameters()
-        model.load_parameters(checkpoint_parameters)
-        predictions = model.predict_proba(features)
-
-        metrics: dict[str, float | int | None] = {
-            "num_samples": len(features),
-            "mean_prediction": sum(predictions) / len(predictions),
-        }
-        if labels is not None:
-            predicted_labels = [1 if value >= 0.5 else 0 for value in predictions]
-            matches = sum(int(predicted == actual) for predicted, actual in zip(predicted_labels, labels))
-            metrics["loss"] = binary_cross_entropy(labels, predictions)
-            metrics["accuracy"] = matches / len(labels)
+        checkpoint_parameters = self.checkpoint_loader.load(
+            checkpoint_path=self.config.checkpoint_path,
+            expected_model_type=self.config.model_type,
+        )
+        predictions, metrics = self.inference_service.run(
+            model_type=self.config.model_type,
+            model_config=model_config,
+            input_batch=input_batch,
+            checkpoint_parameters=checkpoint_parameters,
+            num_features=len(self.config.feature_columns),
+        )
 
         outputs = {
             "checkpoint_path": str(self.config.checkpoint_path),
@@ -80,78 +88,6 @@ class InferenceStage:
             },
         )
         logger.info(
-            f"inference_complete num_samples={metrics['num_samples']} labels_available={labels is not None}"
+            f"inference_complete num_samples={metrics['num_samples']} labels_available={input_batch.labels is not None}"
         )
         return experiment_dir
-
-    def _load_checkpoint_parameters(self) -> dict[str, list[float]]:
-        checkpoint = torch.load(self.config.checkpoint_path, map_location="cpu")
-
-        if isinstance(checkpoint, dict) and "parameters" in checkpoint:
-            checkpoint_model_type = checkpoint.get("model_type")
-            if checkpoint_model_type and checkpoint_model_type != self.config.model_type:
-                raise ValueError(
-                    "Checkpoint model_type mismatch: "
-                    f"expected {self.config.model_type}, got {checkpoint_model_type}"
-                )
-            return checkpoint["parameters"]
-
-        if isinstance(checkpoint, dict):
-            return checkpoint
-
-        # Backward compatibility for legacy JSON checkpoints.
-        try:
-            return json.loads(self.config.checkpoint_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            raise ValueError(
-                "checkpoint_path must contain either a torch-saved checkpoint dict "
-                "or a JSON parameter dictionary"
-            ) from exc
-
-    def _load_input_rows(self) -> tuple[list[list[float]], list[int] | None]:
-        path = self.config.input_data_path
-        if not path.exists():
-            raise FileNotFoundError(f"Inference input data not found: {path}")
-
-        with path.open("r", newline="", encoding="utf-8") as handle:
-            reader = csv.DictReader(handle)
-            header = reader.fieldnames or []
-            required_columns = list(self.config.feature_columns)
-            if self.config.label_column is not None:
-                required_columns.append(self.config.label_column)
-
-            missing = [column for column in required_columns if column not in header]
-            if missing:
-                raise ValueError(
-                    f"{path} is missing required inference columns: {missing}. Header columns: {header}"
-                )
-
-            features: list[list[float]] = []
-            labels: list[int] = []
-            for row_number, row in enumerate(reader, start=2):
-                try:
-                    feature_row = [float(row[column]) for column in self.config.feature_columns]
-                except (TypeError, ValueError) as exc:
-                    raise ValueError(
-                        f"{path}:{row_number} contains non-numeric feature values"
-                    ) from exc
-
-                features.append(feature_row)
-
-                if self.config.label_column is not None:
-                    try:
-                        label = int(float(row[self.config.label_column]))
-                    except (TypeError, ValueError) as exc:
-                        raise ValueError(
-                            f"{path}:{row_number} contains non-numeric label values"
-                        ) from exc
-                    if label not in (0, 1):
-                        raise ValueError(
-                            f"{path}:{row_number} contains invalid class label {label}"
-                        )
-                    labels.append(label)
-
-        if not features:
-            raise ValueError("input_data_path must contain at least one data row")
-
-        return features, labels if self.config.label_column is not None else None

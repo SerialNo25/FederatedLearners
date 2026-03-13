@@ -2,6 +2,17 @@
 
 The inference stage loads a model checkpoint produced by training stages, reads inference rows from a CSV file, and executes inference through the configured model.
 
+## Layered Architecture Alignment
+
+Current implementation follows the repository layering rules:
+
+- **CLI layer (`main.py`)** only parses arguments and dispatches to the stage registry.
+- **Composition root (`composition/run_inference.py`)** loads TOML config, validates with `InferenceConfig`, and explicitly wires dependencies (`InferenceService`, `InferenceDataLoader`, and `CheckpointParameterLoader`).
+- **Stage layer (`stages/inference/stage.py`)** orchestrates workflow only: logger creation, optional device selection, domain-service calls, and artifact persistence.
+- **Domain layer (`domain/inference/inference_service.py`)** contains reusable inference logic: CSV validation/loading, checkpoint parsing, prediction execution, and optional loss/accuracy computation.
+
+This resolves prior layering concerns where stage orchestration mixed domain concerns (CSV parsing, checkpoint decoding, and metric calculations) directly into stage code.
+
 ## Run
 
 ```bash
