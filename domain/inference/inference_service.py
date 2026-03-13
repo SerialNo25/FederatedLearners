@@ -6,7 +6,6 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import torch
 
@@ -112,7 +111,7 @@ class InferenceService:
         self,
         *,
         model_type: str,
-        model_config: dict[str, Any],
+        model_config: dict[str, object],
         input_batch: InferenceBatch,
         checkpoint_parameters: dict[str, list[float]],
         num_features: int,

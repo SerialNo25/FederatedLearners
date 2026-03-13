@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Mapping
-from typing import Any
 
 from domain.models.basic_model import LogisticRegressionModel
 from domain.models.device_selector import DeviceSelector
+from domain.models.federated_model_protocol import FederatedModelProtocol
 
-ModelFactory = Callable[[int, Mapping[str, Any]], Any]
+ModelFactory = Callable[[int, Mapping[str, object]], FederatedModelProtocol]
+ModelConfig = Mapping[str, object]
 LOGGER = logging.getLogger(__name__)
 
 
@@ -28,7 +29,7 @@ class ModelRegistry:
     def list_model_types(self) -> list[str]:
         return sorted(self._factories.keys())
 
-    def get_factory(self, model_type: str, config: Mapping[str, Any]) -> Callable[[int], Any]:
+    def get_factory(self, model_type: str, config: ModelConfig) -> Callable[[int], FederatedModelProtocol]:
         if model_type not in self._factories:
             raise ValueError(
                 f"Unknown model_type '{model_type}'. Registered model types: {', '.join(self.list_model_types())}"
@@ -41,12 +42,11 @@ class ModelRegistry:
 MODEL_REGISTRY = ModelRegistry()
 
 
-def _build_logistic_regression_model(n_features: int, config: Mapping[str, Any]) -> Any:
-    del config
+def _build_logistic_regression_model(n_features: int, config: ModelConfig) -> FederatedModelProtocol:
     return LogisticRegressionModel.initialize(n_features)
 
 
-def _build_tabnet_model(n_features: int, config: Mapping[str, Any]) -> Any:
+def _build_tabnet_model(n_features: int, config: ModelConfig) -> FederatedModelProtocol:
     from domain.models.tabnet_model import TabNetModel
 
     selector = DeviceSelector()
