@@ -19,9 +19,10 @@ from domain.models.model_registry import ModelFactoryProtocol
 from domain.training.trainer import TrainingConfig
 from stages.federated_training.config import FederatedTrainingConfig
 from stages.federated_training.round_reporter import FederatedRoundReporter
+from stages.stage import Stage
 
 
-class FederatedTrainingStage:
+class FederatedTrainingStage(Stage):
     def __init__(
         self,
         config: FederatedTrainingConfig,

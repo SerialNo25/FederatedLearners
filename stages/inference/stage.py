@@ -12,9 +12,10 @@ from domain.inference.inference_service import (
 )
 from domain.logging.experiment_logger import StageExperimentLogger
 from stages.inference.config import InferenceConfig
+from stages.stage import Stage
 
 
-class InferenceStage:
+class InferenceStage(Stage):
     def __init__(
         self,
         config: InferenceConfig,
