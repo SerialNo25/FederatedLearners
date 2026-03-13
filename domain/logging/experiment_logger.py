@@ -2,6 +2,9 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+
+
+
 class StageExperimentLogger:
     """Persists stage-level experiment artifacts to a local directory."""
 
@@ -44,7 +47,7 @@ class StageExperimentLogger:
     def critical(self, message: str) -> None:
         self.logger.critical(message)
 
-    def write_metrics(self, step: str, values: dict[str, float | int | str | None]) -> None:
+    def write_metrics(self, step: str, values: dict[str, object]) -> None:
         record = {
             "step": step,
             "stage": self.stage_name,

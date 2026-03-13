@@ -6,6 +6,7 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
+
 import torch
 
 from domain.models.model_registry import MODEL_REGISTRY, ModelOptions
