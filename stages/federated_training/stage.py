@@ -35,6 +35,7 @@ class FederatedTrainingStage:
 
     def execute(self) -> Path:
         datasets = self._load_datasets()
+        self._assert_dataset_invariants(datasets)
         experiment_dir = self.config.output_dir / self.config.experiment_name
         orchestrator, institutions = self._build_orchestrator(datasets)
         self._log_experiment_start(institutions)
@@ -112,6 +113,16 @@ class FederatedTrainingStage:
             )
             for institution in self.config.institutions
         ]
+
+    def _assert_dataset_invariants(self, datasets: list[InstitutionDataset]) -> None:
+        if not datasets:
+            raise RuntimeError("Federated training requires at least one institution dataset")
+
+        for dataset in datasets:
+            if not dataset.features or not dataset.labels:
+                raise RuntimeError(
+                    f"Institution dataset '{dataset.institution_id}' is empty; at least one row is required"
+                )
 
     def _write_round_metrics(
         self,
