@@ -1,6 +1,6 @@
 experiment_name = "sample_inference"
 output_dir = "data/experiments"
-checkpoint_path = "data/experiments/inclusive_federated_global/model.pt"
+checkpoint_path = "data/experiments/federated_global/model.pt"
 model_type = "tabnet"
 input_data_path = "configs/sample_data/bank_1.csv"
 label_column = "Class"

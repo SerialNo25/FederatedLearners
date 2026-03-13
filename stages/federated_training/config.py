@@ -1,4 +1,4 @@
-"""Configuration schema for inclusive federated training stage."""
+"""Configuration schema for federated training stage."""
 
 from __future__ import annotations
 
@@ -14,10 +14,10 @@ class InstitutionConfig(BaseModel):
     dataset_path: Path
 
 
-class InclusiveFederatedTrainingConfig(BaseModel):
+class FederatedTrainingConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    experiment_name: str = "inclusive_federated_global"
+    experiment_name: str = "federated_global"
     output_dir: Path = Path("dataset/experiments")
     num_institutions: int
     institutions: list[InstitutionConfig] = Field(default_factory=list)
@@ -76,7 +76,7 @@ class InclusiveFederatedTrainingConfig(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def _validate_institutions(self) -> "InclusiveFederatedTrainingConfig":
+    def _validate_institutions(self) -> "FederatedTrainingConfig":
         if len(self.institutions) != self.num_institutions:
             raise ValueError(
                 "Configured institutions count must match num_institutions"
@@ -89,7 +89,7 @@ class InclusiveFederatedTrainingConfig(BaseModel):
         return self
 
     @classmethod
-    def from_dict(cls, payload: dict) -> "InclusiveFederatedTrainingConfig":
+    def from_dict(cls, payload: dict) -> "FederatedTrainingConfig":
         return cls.model_validate(payload)
 
     def to_dict(self) -> dict:
