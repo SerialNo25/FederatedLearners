@@ -18,6 +18,7 @@ class InferenceStageArchitectureTests(unittest.TestCase):
         self.assertIn("input_data_path", field_names)
         self.assertIn("label_column", field_names)
         self.assertIn("feature_columns", field_names)
+        self.assertNotIn("tabnet_device", field_names)
 
     def test_inference_stage_orchestrates_domain_services(self):
         source = Path("stages/inference/stage.py").read_text(encoding="utf-8")
@@ -25,8 +26,11 @@ class InferenceStageArchitectureTests(unittest.TestCase):
 
         has_csv_usage = False
         service_calls = {"load_csv": False, "load": False, "run": False}
+        uses_device_selector = False
 
         for node in ast.walk(module):
+            if isinstance(node, ast.Name) and node.id == "DeviceSelector":
+                uses_device_selector = True
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
                 if isinstance(node.func.value, ast.Name) and node.func.value.id == "csv":
                     has_csv_usage = True
@@ -34,6 +38,7 @@ class InferenceStageArchitectureTests(unittest.TestCase):
                     service_calls[node.func.attr] = True
 
         self.assertFalse(has_csv_usage)
+        self.assertFalse(uses_device_selector)
         self.assertTrue(all(service_calls.values()))
 
     def test_inference_domain_service_handles_csv_checkpoint_and_metrics(self):

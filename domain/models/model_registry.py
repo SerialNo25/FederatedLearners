@@ -51,8 +51,7 @@ def _build_tabnet_model(n_features: int, config: Mapping[str, Any]) -> Any:
 
     selector = DeviceSelector()
     available_devices = selector.available_devices()
-    configured_device = config.get("tabnet_device")
-    device = str(configured_device) if configured_device else selector.select_best_device()
+    device = selector.select_best_device()
     LOGGER.info(
         "tabnet_device_selection selected=%s available=%s",
         device,
