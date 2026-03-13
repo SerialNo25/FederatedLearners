@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 
-class InferenceStageTests(unittest.TestCase):
+class InferenceStageArchitectureTests(unittest.TestCase):
     def test_inference_config_exposes_file_and_label_fields(self):
         source = Path("stages/inference/config.py").read_text(encoding="utf-8")
         module = ast.parse(source)
@@ -19,46 +19,50 @@ class InferenceStageTests(unittest.TestCase):
         self.assertIn("label_column", field_names)
         self.assertIn("feature_columns", field_names)
 
-    def test_inference_stage_reads_csv_and_computes_optional_metrics(self):
+    def test_inference_stage_orchestrates_domain_services(self):
         source = Path("stages/inference/stage.py").read_text(encoding="utf-8")
         module = ast.parse(source)
 
-        has_csv_dict_reader = False
-        computes_accuracy = False
-        computes_loss = False
+        has_csv_usage = False
+        service_calls = {"load_csv": False, "load": False, "run": False}
 
         for node in ast.walk(module):
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
                 if isinstance(node.func.value, ast.Name) and node.func.value.id == "csv":
-                    if node.func.attr == "DictReader":
-                        has_csv_dict_reader = True
-                if node.func.attr == "get" and node.args:
-                    if isinstance(node.args[0], ast.Constant) and node.args[0].value == "loss":
-                        computes_loss = True
+                    has_csv_usage = True
+                if node.func.attr in service_calls:
+                    service_calls[node.func.attr] = True
+
+        self.assertFalse(has_csv_usage)
+        self.assertTrue(all(service_calls.values()))
+
+    def test_inference_domain_service_handles_csv_checkpoint_and_metrics(self):
+        source = Path("domain/inference/inference_service.py").read_text(encoding="utf-8")
+        module = ast.parse(source)
+
+        has_csv_dict_reader = False
+        has_torch_load = False
+        computes_accuracy = False
+        computes_loss = False
+
+        for node in ast.walk(module):
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Attribute):
+                    if isinstance(node.func.value, ast.Name) and node.func.value.id == "csv":
+                        if node.func.attr == "DictReader":
+                            has_csv_dict_reader = True
+                    if isinstance(node.func.value, ast.Name) and node.func.value.id == "torch":
+                        if node.func.attr == "load":
+                            has_torch_load = True
+                if isinstance(node.func, ast.Name) and node.func.id == "binary_cross_entropy":
+                    computes_loss = True
             if isinstance(node, ast.Constant) and node.value == "accuracy":
                 computes_accuracy = True
 
         self.assertTrue(has_csv_dict_reader)
+        self.assertTrue(has_torch_load)
         self.assertTrue(computes_accuracy)
         self.assertTrue(computes_loss)
-
-    def test_inference_stage_loads_torch_checkpoint_payload(self):
-        source = Path("stages/inference/stage.py").read_text(encoding="utf-8")
-        module = ast.parse(source)
-
-        has_torch_load = False
-        checks_parameters_key = False
-
-        for node in ast.walk(module):
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-                if isinstance(node.func.value, ast.Name) and node.func.value.id == "torch":
-                    if node.func.attr == "load":
-                        has_torch_load = True
-            if isinstance(node, ast.Constant) and node.value == "parameters":
-                checks_parameters_key = True
-
-        self.assertTrue(has_torch_load)
-        self.assertTrue(checks_parameters_key)
 
 
 if __name__ == "__main__":
