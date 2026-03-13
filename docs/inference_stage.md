@@ -18,7 +18,7 @@ or:
 
 `configs/inference.toml` includes:
 
-- `checkpoint_path`: path to `model.pt` JSON parameters.
+- `checkpoint_path`: path to `model.pt` checkpoint persisted by training stages (torch-saved payload containing `model_type` and `parameters`).
 - `model_type`: model registered in `domain/models/model_registry.py` (for example `tabnet`).
 - `input_data_path`: CSV file containing feature rows to score.
 - `feature_columns`: ordered list of feature columns to read from the CSV.

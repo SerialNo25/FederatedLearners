@@ -6,6 +6,8 @@ import csv
 import json
 from pathlib import Path
 
+import torch
+
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.models.device_selector import DeviceSelector
 from domain.models.model_registry import MODEL_REGISTRY
@@ -38,8 +40,8 @@ class InferenceStage:
         model_factory = MODEL_REGISTRY.get_factory(self.config.model_type, model_config)
         model = model_factory(len(self.config.feature_columns))
 
-        checkpoint = json.loads(self.config.checkpoint_path.read_text(encoding="utf-8"))
-        model.load_parameters(checkpoint)
+        checkpoint_parameters = self._load_checkpoint_parameters()
+        model.load_parameters(checkpoint_parameters)
         predictions = model.predict_proba(features)
 
         metrics: dict[str, float | int | None] = {
@@ -81,6 +83,30 @@ class InferenceStage:
             f"inference_complete num_samples={metrics['num_samples']} labels_available={labels is not None}"
         )
         return experiment_dir
+
+    def _load_checkpoint_parameters(self) -> dict[str, list[float]]:
+        checkpoint = torch.load(self.config.checkpoint_path, map_location="cpu")
+
+        if isinstance(checkpoint, dict) and "parameters" in checkpoint:
+            checkpoint_model_type = checkpoint.get("model_type")
+            if checkpoint_model_type and checkpoint_model_type != self.config.model_type:
+                raise ValueError(
+                    "Checkpoint model_type mismatch: "
+                    f"expected {self.config.model_type}, got {checkpoint_model_type}"
+                )
+            return checkpoint["parameters"]
+
+        if isinstance(checkpoint, dict):
+            return checkpoint
+
+        # Backward compatibility for legacy JSON checkpoints.
+        try:
+            return json.loads(self.config.checkpoint_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "checkpoint_path must contain either a torch-saved checkpoint dict "
+                "or a JSON parameter dictionary"
+            ) from exc
 
     def _load_input_rows(self) -> tuple[list[list[float]], list[int] | None]:
         path = self.config.input_data_path
