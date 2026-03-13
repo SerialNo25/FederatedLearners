@@ -1,0 +1,24 @@
+experiment_name = "federated_banks_1_2"
+output_dir = "data/experiments"
+num_institutions = 2
+num_rounds = 5
+local_epochs = 5
+learning_rate = 0.05
+proximal_mu = 0.001
+model_type = "tabnet" # must exist in domain/models/model_registry.py
+
+# TabNet-only options (used when model_type = "tabnet")
+tabnet_decision_dim = 16
+tabnet_attention_dim = 16
+tabnet_steps = 3
+tabnet_relaxation_factor = 1.5
+tabnet_sparsity_weight = 0.0001
+# Device is auto-selected by priority: CUDA > MPS > CPU
+
+[[institutions]]
+institution_id = "bank_1"
+dataset_path = "configs/sample_data/bank_1.csv"
+
+[[institutions]]
+institution_id = "bank_2"
+dataset_path = "configs/sample_data/bank_2.csv"

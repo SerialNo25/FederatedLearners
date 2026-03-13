@@ -18,7 +18,12 @@ The stage now models each institution similarly to a separately deployed client:
 - Aggregation is performed directly in the orchestrator using sample-weighted parameter averaging, removing framework adapter overhead while preserving FedProx local updates.
 
 ## Configuration
-Use `configs/federated.toml`:
+The stage supports named presets registered in `stages/registry.py`:
+
+- `default` -> `configs/federated.toml`
+- `banks_1_2` -> `configs/federated_banks_1_2.toml`
+
+Both configs expose the same fields:
 
 - `experiment_name`
 - `output_dir`
@@ -53,12 +58,18 @@ Validation enforces:
 
 ## Execution
 ```bash
-python main.py federated_training --config configs/federated.toml
+python main.py federated_training --preset default
 ```
 
-Or via helper script:
+Or via helper scripts:
 ```bash
-./scripts/run_federated_training.sh configs/federated.toml
+./scripts/run_federated_training.sh
+./scripts/run_federated_training_banks_1_2.sh
+```
+
+You can optionally bypass presets with an explicit config path:
+```bash
+python main.py federated_training --config configs/federated.toml
 ```
 
 ## Outputs
