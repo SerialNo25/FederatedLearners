@@ -11,6 +11,8 @@ Helper scripts:
 ```bash
 ./scripts/run_federated_training.sh
 ./scripts/run_federated_training_banks_1_2.sh
+./scripts/run_federated_training_banks_1_3.sh
+./scripts/run_federated_training_banks_2_3.sh
 ```
 
 You can still pass an explicit config path when needed:
@@ -22,6 +24,30 @@ python main.py federated_training --config configs/federated.toml
 See stage documentation:
 
 - `docs/federated_training_stage.md`
+
+## Run local-only training
+
+```bash
+python main.py local_training --preset default
+python main.py local_training --preset bank_1
+python main.py local_training --preset bank_2
+python main.py local_training --preset bank_3
+```
+
+Helper scripts:
+
+```bash
+./scripts/run_local_training.sh
+./scripts/run_local_training_bank_1.sh
+./scripts/run_local_training_bank_2.sh
+./scripts/run_local_training_bank_3.sh
+```
+
+The local stage reuses the same model configuration schema as federated training and can consume a federated-style TOML config while selecting one institution via `local_institution_id`.
+
+See stage documentation:
+
+- `docs/local_training_stage.md`
 
 ## Run inference
 

@@ -22,6 +22,8 @@ The stage supports named presets registered in `stages/registry.py`:
 
 - `default` -> `configs/federated.toml`
 - `banks_1_2` -> `configs/federated_banks_1_2.toml`
+- `banks_1_3` -> `configs/federated_banks_1_3.toml`
+- `banks_2_3` -> `configs/federated_banks_2_3.toml`
 
 Both configs expose the same fields:
 
@@ -66,6 +68,8 @@ Or via helper scripts:
 ```bash
 ./scripts/run_federated_training.sh
 ./scripts/run_federated_training_banks_1_2.sh
+./scripts/run_federated_training_banks_1_3.sh
+./scripts/run_federated_training_banks_2_3.sh
 ```
 
 You can optionally bypass presets with an explicit config path:
