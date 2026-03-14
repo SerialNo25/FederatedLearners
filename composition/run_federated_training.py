@@ -30,6 +30,7 @@ def run_federated_training(config_path: str | Path) -> Path:
     stage = FederatedTrainingStage(
         config=config,
         experiment_logger=experiment_logger,
+        experiment_dir=experiment_dir,
         model_factory=model_factory,
     )
     return stage.execute()

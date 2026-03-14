@@ -19,22 +19,20 @@ class InferenceStage(Stage):
     def __init__(
         self,
         config: InferenceConfig,
+        experiment_logger: StageExperimentLogger,
+        experiment_dir: Path,
         inference_service: InferenceService,
         data_loader: InferenceDataLoader,
         checkpoint_loader: CheckpointParameterLoader,
     ) -> None:
         self.config = config
+        self.experiment_logger = experiment_logger
+        self.experiment_dir = experiment_dir
         self.inference_service = inference_service
         self.data_loader = data_loader
         self.checkpoint_loader = checkpoint_loader
 
     def execute(self) -> Path:
-        experiment_dir = self.config.output_dir / self.config.experiment_name
-        logger = StageExperimentLogger(
-            experiment_dir=str(experiment_dir),
-            stage_name="inference",
-        )
-
         input_batch = self.data_loader.load_csv(
             input_data_path=self.config.input_data_path,
             feature_columns=self.config.feature_columns,
@@ -56,7 +54,7 @@ class InferenceStage(Stage):
         )
 
         if metrics.get("device"):
-            logger.info(f"tabnet_device_selection selected={metrics['device']}")
+            self.experiment_logger.info(f"tabnet_device_selection selected={metrics['device']}")
 
         outputs = {
             "checkpoint_path": str(self.config.checkpoint_path),
@@ -67,13 +65,13 @@ class InferenceStage(Stage):
             "predictions": predictions,
             "metrics": metrics,
         }
-        (experiment_dir / "config.json").write_text(
+        (self.experiment_dir / "config.json").write_text(
             json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
         )
-        (experiment_dir / "predictions.json").write_text(
+        (self.experiment_dir / "predictions.json").write_text(
             json.dumps(outputs, indent=2), encoding="utf-8"
         )
-        logger.write_metrics(
+        self.experiment_logger.write_metrics(
             step="inference",
             values={
                 "epoch": 1,
@@ -83,7 +81,7 @@ class InferenceStage(Stage):
                 "learning_rate": None,
             },
         )
-        logger.info(
+        self.experiment_logger.info(
             f"inference_complete num_samples={metrics['num_samples']} labels_available={input_batch.labels is not None}"
         )
-        return experiment_dir
+        return self.experiment_dir
