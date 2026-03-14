@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from tqdm import tqdm
 
 from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
 from domain.federated.fedprox_orchestrator import (
@@ -19,30 +20,34 @@ from domain.models.model_registry import ModelFactoryProtocol
 from domain.training.trainer import TrainingConfig
 from stages.federated_training.config import FederatedTrainingConfig
 from stages.federated_training.round_reporter import FederatedRoundReporter
+from stages.stage import Stage
 
 
-class FederatedTrainingStage:
+class FederatedTrainingStage(Stage):
     def __init__(
         self,
         config: FederatedTrainingConfig,
         experiment_logger: StageExperimentLogger,
+        experiment_dir: Path,
         model_factory: ModelFactoryProtocol,
         round_reporter: FederatedRoundReporter | None = None,
     ) -> None:
         self.config = config
         self.experiment_logger = experiment_logger
+        self.experiment_dir = experiment_dir
         self.model_factory = model_factory
         self.round_reporter = round_reporter or FederatedRoundReporter()
 
     def execute(self) -> Path:
         datasets = self._load_datasets()
         self._assert_dataset_invariants(datasets)
-        experiment_dir = self.config.output_dir / self.config.experiment_name
+
         orchestrator, institutions = self._build_orchestrator(datasets)
+
         self._log_experiment_start(institutions)
         self._run_training_rounds(orchestrator, datasets)
-        self._persist_artifacts(experiment_dir, orchestrator.global_model)
-        return experiment_dir
+        self._persist_artifacts(self.experiment_dir, orchestrator.global_model)
+        return self.experiment_dir
 
     def _build_orchestrator(
         self,
@@ -89,7 +94,7 @@ class FederatedTrainingStage:
         orchestrator: FedProxOrchestrator,
         datasets: list[InstitutionDataset],
     ) -> None:
-        for round_index in range(1, self.config.num_rounds + 1):
+        for round_index in tqdm(range(1, self.config.num_rounds + 1), "federated rounds"):
             updates = orchestrator.run_round()
             evaluations = [
                 evaluate_institution(orchestrator.global_model, dataset) for dataset in datasets

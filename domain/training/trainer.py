@@ -34,8 +34,6 @@ def train_local_model(
     global_parameters: dict[str, list[float]] | None = None,
 ) -> float:
     if hasattr(model, "network"):
-        print("nice")
-        print(type(model))
         return _train_torch_model(
             model=model,
             features=features,

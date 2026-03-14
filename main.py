@@ -4,16 +4,14 @@ from __future__ import annotations
 
 import argparse
 
-from stages.registry import build_default_stage_registry
+from stages.registry import build_default_stage_registry, StageRegistry
 
 
-def parse_args() -> argparse.Namespace:
-    registry = build_default_stage_registry()
-
+def parse_args(stageRegistry: StageRegistry) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Federated fraud experiment pipeline")
     parser.add_argument(
         "stage",
-        choices=registry.list_stages(),
+        choices=stageRegistry.list_stages(),
         help="Pipeline stage to execute",
     )
     parser.add_argument(
@@ -28,8 +26,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    args = parse_args()
     registry = build_default_stage_registry()
+    args = parse_args(registry)
     runner = registry.get(args.stage)
     config_path = registry.resolve_config_path(
         args.stage,
