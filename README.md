@@ -11,6 +11,8 @@ Helper scripts:
 ```bash
 ./scripts/run_federated_training.sh
 ./scripts/run_federated_training_banks_1_2.sh
+./scripts/run_federated_training_banks_1_3.sh
+./scripts/run_federated_training_banks_2_3.sh
 ```
 
 You can still pass an explicit config path when needed:
