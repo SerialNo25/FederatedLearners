@@ -85,4 +85,6 @@ def build_default_stage_registry() -> StageRegistry:
     registry.register_preset("local_training", "bank_2", "configs/local_training_bank_2.toml")
     registry.register_preset("local_training", "bank_3", "configs/local_training_bank_3.toml")
     registry.register_preset("federated_training", "banks_1_2", "configs/federated_banks_1_2.toml")
+    registry.register_preset("federated_training", "banks_1_3", "configs/federated_banks_1_3.toml")
+    registry.register_preset("federated_training", "banks_2_3", "configs/federated_banks_2_3.toml")
     return registry
