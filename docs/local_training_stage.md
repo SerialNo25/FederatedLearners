@@ -10,6 +10,9 @@ It reuses the same model registry and model configuration schema as the federate
 
 ```bash
 python main.py local_training --preset default
+python main.py local_training --preset bank_1
+python main.py local_training --preset bank_2
+python main.py local_training --preset bank_3
 ```
 
 or
@@ -17,6 +20,17 @@ or
 ```bash
 python main.py local_training --config configs/local_training.toml
 ```
+
+Helper scripts:
+
+```bash
+./scripts/run_local_training.sh
+./scripts/run_local_training_bank_1.sh
+./scripts/run_local_training_bank_2.sh
+./scripts/run_local_training_bank_3.sh
+```
+
+The `bank_1`, `bank_2`, and `bank_3` presets each set a distinct `experiment_name`, so artifacts are written into separate experiment folders under `data/experiments/`.
 
 ## Configuration compatibility
 
