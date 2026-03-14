@@ -22,9 +22,9 @@ The repository enforces:
 
 ---
 
-# Architectural Principles
+## Architectural Principles
 
-## 1. Thin CLI Layer
+### 1. Thin CLI Layer
 
 The CLI is responsible only for:
 
@@ -36,7 +36,7 @@ The CLI **must not contain ML or experiment logic**.
 
 ---
 
-## 2. Experiment Pipeline via Stages
+### 2. Experiment Pipeline via Stages
 
 Each step in the experiment pipeline is represented as a **Stage**.
 
@@ -56,9 +56,9 @@ Stages:
 
 ---
 
-## 3. Core ML Logic Isolation
+### 3. Core ML Logic Isolation
 
-Domain logic lives inside **core modules**.
+Domain logic lives inside **domain modules**.
 
 Examples:
 
@@ -76,7 +76,7 @@ Core modules must:
 
 ---
 
-## 4. Validated Configuration
+### 4. Validated Configuration
 
 All configuration is defined using **Pydantic models**.
 
@@ -96,7 +96,7 @@ Rules:
 
 ---
 
-## 5. Explicit Dependency Wiring
+### 5. Explicit Dependency Wiring
 
 All dependencies are created in **composition roots (`run_*`)**.
 
@@ -115,48 +115,16 @@ There must be:
 
 ---
 
-# File Structure
-
-The project is organized around **domains and experiment stages**.
-
-```
-project/
-│
-├── main.py
-│
-├── run/
-│   ├── run_partition.py
-│   ├── run_local_training.py
-│   ├── run_federated_training.py
-│   ├── run_ensemble.py
-│   └── run_evaluation.py
-│
-├── stages/
-│   ├── partition/
-│   ├── local_training/
-│   ├── federated_training/
-│   ├── ensemble/
-│   └── evaluation/
-│
-├── core/
-│   ├── data/
-│   ├── models/
-│   ├── training/
-│   ├── federated/
-│   └── metrics/
-│
-├── configs/
-│
-├── data/
-│
-└── docs/
-```
+## File Structure
+The project should be domain and stage partitioned. 
+Core logic resides in the domain partitioned by domain model. 
+Stages and related files are partitioned together.
 
 ---
 
-# Layered Architecture
+## Layered Architecture
 
-## Layer 1 — CLI Entry (`main.py`)
+### Layer 1 — CLI Entry (`main.py`)
 
 Responsibilities:
 
@@ -174,7 +142,7 @@ The CLI **must not contain experiment logic**.
 
 ---
 
-# Layer 2 — Composition Roots (`run_*`)
+## Layer 2 — Composition Roots (`run_*`)
 
 Composition roots connect configuration with execution.
 
@@ -186,19 +154,11 @@ Responsibilities:
 * Instantiate the appropriate Stage
 * Execute the stage
 
-Example:
-
-```
-run_local_training()
-run_federated_training()
-run_ensemble()
-```
-
 This layer is responsible for **dependency wiring only**.
 
 ---
 
-# Layer 3 — Stage System
+## Layer 3 — Stage System
 
 Stages represent **experiment steps**.
 
@@ -213,7 +173,7 @@ Stages do **not implement ML algorithms**.
 
 ---
 
-## Stage Registry
+### Stage Registry
 
 Stages are registered in a **StageRegistry**.
 
@@ -235,9 +195,9 @@ evaluation
 
 ---
 
-# Individual Stage Responsibilities
+## Individual Stage Responsibilities
 
-## Dataset Partition Stage
+### Dataset Partition Stage
 
 Simulates **multiple financial institutions** by splitting the dataset into silos.
 
@@ -259,7 +219,7 @@ data/banks/
 
 ---
 
-## Local Training Stage
+### Local Training Stage
 
 Trains a **local TabNet model (Lk)** for each bank.
 
@@ -272,7 +232,7 @@ Responsibilities:
 
 ---
 
-## Federated Training Stage
+### Federated Training Stage
 
 Runs **Flower-based federated learning** using **FedProx aggregation**.
 
@@ -285,7 +245,7 @@ Responsibilities:
 
 Two modes:
 
-### Inclusive Federated Model
+#### Inclusive Federated Model
 
 ```
 Fincl
@@ -293,7 +253,7 @@ Fincl
 
 Uses **all banks** in training.
 
-### Exclusive Federated Model
+#### Exclusive Federated Model
 
 ```
 Fexcl
@@ -303,7 +263,7 @@ Trains a federated model **excluding bank k**.
 
 ---
 
-## Ensemble Stage
+### Ensemble Stage
 
 Evaluates **ensemble predictions**.
 
@@ -321,7 +281,7 @@ prediction = w * Lk + (1-w) * Fexcl
 
 ---
 
-## Evaluation Stage
+### Evaluation Stage
 
 Computes experiment metrics.
 
@@ -344,19 +304,9 @@ Also includes:
 
 ---
 
-# Layer 4 — Pydantic Config Models
+## Layer 4 — Pydantic Config Models
 
 Each stage defines its own configuration schema.
-
-Example:
-
-```
-PartitionConfig
-LocalTrainingConfig
-FederatedTrainingConfig
-EnsembleConfig
-EvaluationConfig
-```
 
 Rules:
 
@@ -366,33 +316,9 @@ Rules:
 
 ---
 
-# Layer 5 — Core Domain Logic
+## Layer 5 — Core Domain Logic
 
-The **core module** contains all reusable ML logic.
-
-Examples:
-
-```
-core/data/
-    dataset_loader.py
-    partitioning.py
-
-core/models/
-    tabnet_model.py
-
-core/training/
-    trainer.py
-    loss.py
-
-core/federated/
-    fedprox.py
-    client.py
-    server.py
-
-core/metrics/
-    pr_auc.py
-    evaluation.py
-```
+The **domain module** contains all reusable ML logic.
 
 Core modules must:
 
@@ -402,7 +328,7 @@ Core modules must:
 
 ---
 
-# Execution Flow
+## Execution Flow
 
 Example:
 
@@ -420,9 +346,11 @@ Execution steps:
 6. Stage orchestrates workflow
 7. Core services perform computation
 
+Every stage should have a sh script to start the stage with its default config.
+
 ---
 
-# Error Handling Strategy
+## Error Handling Strategy
 
 Error handling follows layered responsibility:
 
@@ -440,7 +368,7 @@ Composition roots
 
 ---
 
-# Data Structure
+## Data Structure
 
 The project operates on a **tabular binary classification dataset** for fraud detection.
 
@@ -507,7 +435,7 @@ Data-loading code should validate that:
 
 ---
 
-# Data Management
+## Data Management
 
 All stages store outputs in the `data/` directory.
 
@@ -526,7 +454,7 @@ Each stage must use a **dedicated subfolder**.
 
 ---
 
-# Logging Guidelines
+## Logging Guidelines
 
 All experiments must be **fully reproducible**.
 
@@ -534,7 +462,7 @@ External experiment tracking tools are **not permitted**.
 
 ---
 
-## 1. Log File (`train.log`)
+### 1. Log File (`train.log`)
 
 Human-readable file containing:
 
@@ -546,7 +474,7 @@ Human-readable file containing:
 
 ---
 
-## 2. Metrics File (`metrics.jsonl`)
+### 2. Metrics File (`metrics.jsonl`)
 
 Machine-readable JSONL file.
 
@@ -562,7 +490,7 @@ learning_rate
 
 ---
 
-## 3. Required Experiment Structure
+### 3. Required Experiment Structure
 
 ```
 experiment_name/
@@ -574,7 +502,7 @@ experiment_name/
 
 ---
 
-# Reproducibility Requirements
+## Reproducibility Requirements
 
 All experiments must record:
 
@@ -589,3 +517,9 @@ This ensures **full reproducibility of federated experiments**.
 ---
 
 If you'd like, I can also help you produce a **much stronger version that aligns with ML experiment best practices** (e.g., adding an **Experiment Manager layer**, which is usually essential for projects like this).
+
+---
+
+## Documentation Requirements
+
+- Each stage should have a stage documentation in docs/
