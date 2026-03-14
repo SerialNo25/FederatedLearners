@@ -31,6 +31,19 @@ class StageRegistryPresetArchitectureTests(unittest.TestCase):
         )
         self.assertTrue(assigns_preset_dict)
 
+
+    def test_default_registry_registers_local_training_stage(self):
+        found = False
+        for node in ast.walk(self.module):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                if node.func.attr == "register" and len(node.args) >= 2:
+                    stage = node.args[0]
+                    if isinstance(stage, ast.Constant) and stage.value == "local_training":
+                        found = True
+                        break
+
+        self.assertTrue(found)
+
     def test_default_registry_registers_banks_1_2_preset(self):
         found = False
         for node in ast.walk(self.module):

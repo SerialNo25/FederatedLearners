@@ -23,6 +23,24 @@ See stage documentation:
 
 - `docs/federated_training_stage.md`
 
+## Run local-only training
+
+```bash
+python main.py local_training --preset default
+```
+
+Helper script:
+
+```bash
+./scripts/run_local_training.sh
+```
+
+The local stage reuses the same model configuration schema as federated training and can consume a federated-style TOML config while selecting one institution via `local_institution_id`.
+
+See stage documentation:
+
+- `docs/local_training_stage.md`
+
 ## Run inference
 
 ```bash
