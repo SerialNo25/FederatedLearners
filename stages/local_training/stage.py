@@ -49,6 +49,9 @@ class LocalTrainingStage(Stage):
         self.experiment_logger.info(
             f"dataset_split train={len(train_dataset.features)} val={len(val_dataset.features)}"
         )
+        self.experiment_logger.info(
+            f"fraud_weight={self.config.fraud_weight} classification_threshold={self.config.classification_threshold}"
+        )
 
         model = self.model_factory(len(dataset.features[0]))
         model_device = getattr(model, "device", None)
@@ -75,10 +78,16 @@ class LocalTrainingStage(Stage):
                 learning_rate=self.config.learning_rate,
                 local_epochs=self.config.local_epochs,
                 proximal_mu=0.0,
+                fraud_weight=self.config.fraud_weight,
             ),
             epoch_callback=_record_epoch,
         )
-        evaluation = epoch_records[-1].validation if epoch_records else evaluate_institution(model, val_dataset)
+        evaluation = evaluation = epoch_records[-1].validation if epoch_records else evaluate_institution(
+            model,
+            val_dataset,
+            pos_weight=self.config.fraud_weight,
+            threshold=self.config.classification_threshold,
+        )
 
         self.experiment_logger.write_metrics(
             step="local_training",
@@ -90,17 +99,23 @@ class LocalTrainingStage(Stage):
                     "institution_id": evaluation.institution_id,
                     "val_loss": evaluation.loss,
                     "val_accuracy": evaluation.accuracy,
+                    "val_precision": evaluation.precision,
+                    "val_recall": evaluation.recall,
+                    "val_f1": evaluation.f1,
                     "pr_auc": evaluation.pr_auc,
                     "best_f1": evaluation.best_f1,
                     "best_threshold": evaluation.best_threshold,
                 },
                 "learning_rate": self.config.learning_rate,
+                "classification_threshold": self.config.classification_threshold
             },
         )
         self.experiment_logger.info(
             f"local_training_complete institution={evaluation.institution_id} "
             f"val_loss={evaluation.loss:.6f} val_accuracy={evaluation.accuracy:.6f} "
             f"pr_auc={evaluation.pr_auc:.6f} best_f1={evaluation.best_f1:.6f}"
+            f"val_loss={evaluation.loss:.6f} val_accuracy={evaluation.accuracy:.6f} "
+            f"val_precision={evaluation.precision:.6f} val_recall={evaluation.recall:.6f} val_f1={evaluation.f1:.6f}"
         )
 
         plotter = ExperimentPlotter(self.experiment_dir)

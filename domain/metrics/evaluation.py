@@ -1,4 +1,4 @@
-"""Evaluation utilities for institution-level model quality."""
+"""Evaluation utilities for institution-level global model quality."""
 
 from __future__ import annotations
 
@@ -23,6 +23,9 @@ class InstitutionMetrics:
     institution_id: str
     loss: float
     accuracy: float
+    precision: float
+    recall: float
+    f1: float
     pr_auc: float
     best_f1: float
     best_threshold: float
@@ -32,7 +35,6 @@ class InstitutionMetrics:
     f1_curve: list[float]
     labels: list[int]
     probabilities: list[float]
-
 
 @dataclass(frozen=True)
 class ThresholdCurve:
@@ -44,21 +46,35 @@ class ThresholdCurve:
     best_f1: float
     best_threshold: float
 
-
 def evaluate_institution(
     model,
     dataset: InstitutionDataset,
+    pos_weight: float = 1.0,
+    threshold: float = 0.5,
 ) -> InstitutionMetrics:
     probabilities = model.predict_proba(dataset.features)
     threshold_curve = compute_threshold_curve(dataset.labels, probabilities)
-    predictions = [1 if probability >= 0.5 else 0 for probability in probabilities]
-    matches = sum(int(prediction == label) for prediction, label in zip(predictions, dataset.labels))
+    predictions = [1 if probability >= threshold else 0 for probability in probabilities]
+
+    matches = sum(int(p == l) for p, l in zip(predictions, dataset.labels))
     accuracy = matches / max(len(dataset.labels), 1)
-    loss = binary_cross_entropy(dataset.labels, probabilities)
+    loss = binary_cross_entropy(dataset.labels, probabilities, pos_weight=pos_weight)
+
+    tp = sum(1 for p, l in zip(predictions, dataset.labels) if p == 1 and l == 1)
+    fp = sum(1 for p, l in zip(predictions, dataset.labels) if p == 1 and l == 0)
+    fn = sum(1 for p, l in zip(predictions, dataset.labels) if p == 0 and l == 1)
+
+    precision = tp / max(tp + fp, 1)
+    recall = tp / max(tp + fn, 1)
+    f1 = 2 * precision * recall / max(precision + recall, 1e-7)
+
     return InstitutionMetrics(
         institution_id=dataset.institution_id,
         loss=loss,
         accuracy=accuracy,
+        precision=precision,
+        recall=recall,
+        f1=f1,
         pr_auc=threshold_curve.pr_auc,
         best_f1=threshold_curve.best_f1,
         best_threshold=threshold_curve.best_threshold,
@@ -69,7 +85,6 @@ def evaluate_institution(
         labels=list(dataset.labels),
         probabilities=probabilities,
     )
-
 
 def compute_threshold_curve(labels: list[int], probabilities: list[float]) -> ThresholdCurve:
     if not labels or not probabilities:
