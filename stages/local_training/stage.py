@@ -94,13 +94,15 @@ class LocalTrainingStage(Stage):
                     "val_precision": evaluation.precision,
                     "val_recall": evaluation.recall,
                     "val_f1": evaluation.f1,
+                    "val_pr_auc": evaluation.pr_auc,
                 }
             },
         )
         self.experiment_logger.info(
             f"local_training_complete institution={evaluation.institution_id} "
             f"val_loss={evaluation.loss:.6f} val_accuracy={evaluation.accuracy:.6f} "
-            f"val_precision={evaluation.precision:.6f} val_recall={evaluation.recall:.6f} val_f1={evaluation.f1:.6f}"
+            f"val_precision={evaluation.precision:.6f} val_recall={evaluation.recall:.6f} "
+            f"val_f1={evaluation.f1:.6f} val_pr_auc={evaluation.pr_auc:.6f}"
         )
 
         (self.experiment_dir / "config.json").write_text(
@@ -110,5 +112,6 @@ class LocalTrainingStage(Stage):
             checkpoint_path=self.experiment_dir / "model.pt",
             model_type=self.config.model.model_type,
             model=model,
+            model_config=self.config.model.model_dump(mode="python"),
         )
         return self.experiment_dir

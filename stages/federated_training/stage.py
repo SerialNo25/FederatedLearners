@@ -148,4 +148,5 @@ class FederatedTrainingStage(Stage):
             checkpoint_path=experiment_dir / "model.pt",
             model_type=self.config.model.model_type,
             model=model,
+            model_config=self.config.model.model_dump(mode="python"),
         )
