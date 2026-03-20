@@ -1,0 +1,15 @@
+output_dir = "data/train_test_splits"
+test_fraction = 0.2
+seed = 42
+
+[[institutions]]
+institution_id = "bank_1"
+dataset_path = "configs/sample_data/bank_1.csv"
+
+[[institutions]]
+institution_id = "bank_2"
+dataset_path = "configs/sample_data/bank_2.csv"
+
+[[institutions]]
+institution_id = "bank_3"
+dataset_path = "configs/sample_data/bank_3.csv"

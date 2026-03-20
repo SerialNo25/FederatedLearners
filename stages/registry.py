@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Protocol
 from pathlib import Path
 
+from composition.run_dataset_split import run_dataset_split
 from composition.run_inference import run_inference
 from composition.run_federated_training import run_federated_training
 from composition.run_local_training import run_local_training
@@ -74,10 +75,12 @@ class StageRegistry:
 
 def build_default_stage_registry() -> StageRegistry:
     registry = StageRegistry()
+    registry.register("dataset_split", run_dataset_split)
     registry.register("inference", run_inference)
     registry.register("federated_training", run_federated_training)
     registry.register("local_training", run_local_training)
 
+    registry.register_preset("dataset_split", "default", "configs/dataset_split.toml")
     registry.register_preset("inference", "default", "configs/inference.toml")
     registry.register_preset("federated_training", "default", "configs/federated.toml")
     registry.register_preset("local_training", "default", "configs/local_training.toml")

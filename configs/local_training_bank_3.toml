@@ -3,7 +3,7 @@ output_dir = "data/experiments"
 model_config = "configs/model.toml"
 
 institution_id = "bank_3"
-dataset_path = "configs/sample_data/bank_3.csv"
+dataset_path = "data/train_test_splits/bank_3_train.csv"
 
 local_epochs = 5
 learning_rate = 0.02

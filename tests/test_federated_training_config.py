@@ -5,13 +5,17 @@ from domain.models.model_config import TabNetModelConfig
 from stages.federated_training.config import FederatedTrainingConfig
 
 
+def _model_dict() -> dict:
+    return {"model_type": "tabnet"}
+
+
 def _institution_dict(institution_id: str) -> dict:
     return {
         "institution_id": institution_id,
-        "dataset_path": f"configs/sample_data/{institution_id}.csv",
+        "dataset_path": f"data/train_test_splits/{institution_id}.csv",
         "local_epochs": 5,
         "learning_rate": 0.01,
-        "model": {"model_type": "tabnet"},
+        "model": _model_dict(),
     }
 
 
@@ -44,7 +48,7 @@ class FederatedTrainingConfigTests(unittest.TestCase):
         self.assertEqual(config.institutions[0].institution_id, "bank_1")
         self.assertEqual(
             config.institutions[0].dataset_path,
-            Path("configs/sample_data/bank_1.csv"),
+            Path("data/train_test_splits/bank_1.csv"),
         )
         self.assertEqual(config.institutions[0].local_epochs, 5)
 

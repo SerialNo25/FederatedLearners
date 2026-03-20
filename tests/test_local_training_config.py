@@ -6,10 +6,10 @@ from stages.local_training.config import LocalTrainingConfig
 def _base_dict(**overrides) -> dict:
     return {
         "institution_id": "bank_1",
-        "dataset_path": "configs/sample_data/bank_1.csv",
+        "dataset_path": "data/train_test_splits/bank_1_train.csv",
         "local_epochs": 2,
         "learning_rate": 0.01,
-        "model": {"model_type": "logistic_regression"},
+        "model": {"model_type": "tabnet"},
         **overrides,
     }
 
