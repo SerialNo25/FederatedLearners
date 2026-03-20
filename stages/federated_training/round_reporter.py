@@ -24,7 +24,6 @@ class FederatedRoundReporter:
         round_index: int,
         updates: list[InstitutionUpdate],
         evaluations: list[InstitutionMetrics],
-        learning_rate: float,
     ) -> FederatedRoundReport:
         local_loss = {update.institution_id: update.local_loss for update in updates}
         local_num_samples = {update.institution_id: update.num_samples for update in updates}
@@ -32,7 +31,13 @@ class FederatedRoundReporter:
             update.institution_id: update.parameter_delta_l2 for update in updates
         }
         eval_payload = {
-            metric.institution_id: {"loss": metric.loss, "accuracy": metric.accuracy}
+            metric.institution_id: {
+                "loss": metric.loss,
+                "accuracy": metric.accuracy,
+                "precision": metric.precision,
+                "recall": metric.recall,
+                "f1": metric.f1,
+            }
             for metric in evaluations
         }
         metrics_payload = {
@@ -45,7 +50,6 @@ class FederatedRoundReporter:
                 "local_parameter_delta_l2": local_parameter_delta_l2,
                 "institution_evaluation": eval_payload,
             },
-            "learning_rate": learning_rate,
         }
 
         summary_line = self._summary_line(round_index=round_index, evaluations=evaluations)
@@ -63,8 +67,8 @@ class FederatedRoundReporter:
     @staticmethod
     def _summary_line(round_index: int, evaluations: list[InstitutionMetrics]) -> str:
         round_loss = sum(metric.loss for metric in evaluations) / len(evaluations)
-        round_accuracy = sum(metric.accuracy for metric in evaluations) / len(evaluations)
-        return f"round={round_index} mean_loss={round_loss:.6f} mean_accuracy={round_accuracy:.6f}"
+        round_f1 = sum(metric.f1 for metric in evaluations) / len(evaluations)
+        return f"round={round_index} mean_loss={round_loss:.6f} mean_f1={round_f1:.6f}"
 
     @staticmethod
     def _institution_lines(
@@ -76,16 +80,17 @@ class FederatedRoundReporter:
             evaluation.institution_id: evaluation for evaluation in evaluations
         }
         return [
-            "round=%s institution=%s local_loss=%.6f eval_loss=%.6f eval_accuracy=%.6f "
-            "num_samples=%s parameter_delta_l2=%.6f"
+            "round=%s institution=%s local_loss=%.6f eval_loss=%.6f "
+            "eval_precision=%.6f eval_recall=%.6f eval_f1=%.6f num_samples=%s"
             % (
                 round_index,
                 update.institution_id,
                 update.local_loss,
                 evaluation_by_institution[update.institution_id].loss,
-                evaluation_by_institution[update.institution_id].accuracy,
+                evaluation_by_institution[update.institution_id].precision,
+                evaluation_by_institution[update.institution_id].recall,
+                evaluation_by_institution[update.institution_id].f1,
                 update.num_samples,
-                update.parameter_delta_l2,
             )
             for update in updates
         ]

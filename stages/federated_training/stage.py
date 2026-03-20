@@ -57,18 +57,21 @@ class FederatedTrainingStage(Stage):
         model_device = getattr(model, "device", None)
         if model_device is not None:
             self.experiment_logger.info(f"tabnet_device_selection selected={model_device}")
-        training_config = TrainingConfig(
-            learning_rate=self.config.learning_rate,
-            local_epochs=self.config.local_epochs,
-            proximal_mu=self.config.proximal_mu,
-        )
+
         institutions = [
             InstitutionNode(
                 dataset=dataset,
-                training_config=training_config,
+                training_config=TrainingConfig(
+                    learning_rate=inst_config.learning_rate,
+                    local_epochs=inst_config.local_epochs,
+                    proximal_mu=self.config.proximal_mu,
+                    fraud_weight=inst_config.fraud_weight,
+                    batch_size=inst_config.batch_size,
+                    seed=inst_config.seed,
+                ),
                 model_factory=self.model_factory,
             )
-            for dataset in datasets
+            for inst_config, dataset in zip(self.config.institutions, datasets)
         ]
         return (
             FedProxOrchestrator(
@@ -97,13 +100,18 @@ class FederatedTrainingStage(Stage):
         for round_index in tqdm(range(1, self.config.num_rounds + 1), "federated rounds"):
             updates = orchestrator.run_round()
             evaluations = [
-                evaluate_institution(orchestrator.global_model, dataset) for dataset in datasets
+                evaluate_institution(
+                    orchestrator.global_model,
+                    dataset,
+                    pos_weight=inst_config.fraud_weight,
+                    threshold=inst_config.classification_threshold,
+                )
+                for inst_config, dataset in zip(self.config.institutions, datasets)
             ]
             round_report = self.round_reporter.build_report(
                 round_index=round_index,
                 updates=updates,
                 evaluations=evaluations,
-                learning_rate=self.config.learning_rate,
             )
             self.experiment_logger.write_metrics(
                 step=f"round_{round_index}",
@@ -116,10 +124,10 @@ class FederatedTrainingStage(Stage):
     def _load_datasets(self) -> list[InstitutionDataset]:
         return [
             load_institution_dataset(
-                institution_id=institution.institution_id,
-                csv_path=institution.dataset_path,
+                institution_id=inst_config.institution_id,
+                csv_path=inst_config.dataset_path,
             )
-            for institution in self.config.institutions
+            for inst_config in self.config.institutions
         ]
 
     def _assert_dataset_invariants(self, datasets: list[InstitutionDataset]) -> None:

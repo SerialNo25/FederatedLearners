@@ -10,8 +10,8 @@ class FederatedMetricsTests(unittest.TestCase):
         mean = weighted_mean(values=[0.9, 0.3], weights=[1, 9])
         self.assertAlmostEqual(mean, 0.36)
 
-    def test_stage_metrics_compute_weighted_train_loss(self):
-        source = Path("stages/federated_training/stage.py").read_text()
+    def test_round_reporter_computes_weighted_train_loss(self):
+        source = Path("stages/federated_training/round_reporter.py").read_text()
         module = ast.parse(source)
 
         weighted_mean_used = False
@@ -24,18 +24,9 @@ class FederatedMetricsTests(unittest.TestCase):
 
         self.assertTrue(weighted_mean_used)
 
-    def test_stage_persists_model_with_torch_save(self):
+    def test_stage_persists_model_via_artifact_writer(self):
         source = Path("stages/federated_training/stage.py").read_text()
-        module = ast.parse(source)
-
-        torch_save_used = False
-        for node in ast.walk(module):
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-                if isinstance(node.func.value, ast.Name) and node.func.value.id == "torch":
-                    if node.func.attr == "save":
-                        torch_save_used = True
-
-        self.assertTrue(torch_save_used)
+        self.assertIn("ModelArtifactWriter.write_model_checkpoint", source)
 
 
 if __name__ == "__main__":

@@ -29,10 +29,8 @@ class FederatedTrainingSimplificationArchitectureTests(unittest.TestCase):
         self.assertIn("get_model_parameters", source)
         self.assertNotIn("def _get_model_parameters", source)
 
-    def test_fedavg_uses_shared_model_parameter_helper(self):
-        source = Path("domain/federated/fedavg.py").read_text(encoding="utf-8")
-        self.assertIn("get_model_parameters", source)
-        self.assertNotIn("def _get_model_parameters", source)
+    def test_fedavg_is_removed(self):
+        self.assertFalse(Path("domain/federated/fedavg.py").exists())
 
 
 if __name__ == "__main__":

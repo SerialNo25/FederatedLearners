@@ -3,54 +3,40 @@ import unittest
 from stages.local_training.config import LocalTrainingConfig
 
 
+def _base_dict(**overrides) -> dict:
+    return {
+        "institution_id": "bank_1",
+        "dataset_path": "configs/sample_data/bank_1.csv",
+        "local_epochs": 2,
+        "learning_rate": 0.01,
+        "model": {"model_type": "logistic_regression"},
+        **overrides,
+    }
+
+
 class LocalTrainingConfigTests(unittest.TestCase):
-    def test_accepts_federated_style_payload_and_selects_requested_institution(self):
-        config = LocalTrainingConfig.from_dict(
-            {
-                "experiment_name": "local_exp",
-                "output_dir": "data/experiments",
-                "num_institutions": 2,
-                "num_rounds": 3,
-                "local_epochs": 2,
-                "learning_rate": 0.01,
-                "proximal_mu": 0.1,
-                "local_institution_id": "bank_2",
-                "model": {"model_type": "logistic_regression"},
-                "institutions": [
-                    {
-                        "institution_id": "bank_1",
-                        "dataset_path": "configs/sample_data/bank_1.csv",
-                    },
-                    {
-                        "institution_id": "bank_2",
-                        "dataset_path": "configs/sample_data/bank_2.csv",
-                    },
-                ],
-            }
-        )
+    def test_loads_institution_directly(self):
+        config = LocalTrainingConfig.from_dict(_base_dict())
+        self.assertEqual(config.institution_id, "bank_1")
 
-        self.assertEqual(config.selected_institution.institution_id, "bank_2")
+    def test_defaults_applied(self):
+        config = LocalTrainingConfig.from_dict(_base_dict())
+        self.assertEqual(config.fraud_weight, 100.0)
+        self.assertEqual(config.batch_size, 256)
+        self.assertEqual(config.classification_threshold, 0.5)
+        self.assertEqual(config.seed, 42)
 
-    def test_defaults_to_first_institution_when_local_id_missing(self):
-        config = LocalTrainingConfig.from_dict(
-            {
-                "local_epochs": 1,
-                "learning_rate": 0.01,
-                "model": {"model_type": "logistic_regression"},
-                "institutions": [
-                    {
-                        "institution_id": "bank_1",
-                        "dataset_path": "configs/sample_data/bank_1.csv",
-                    },
-                    {
-                        "institution_id": "bank_2",
-                        "dataset_path": "configs/sample_data/bank_2.csv",
-                    },
-                ],
-            }
-        )
+    def test_invalid_learning_rate_rejected(self):
+        with self.assertRaises(ValueError):
+            LocalTrainingConfig.from_dict(_base_dict(learning_rate=0.0))
 
-        self.assertEqual(config.selected_institution.institution_id, "bank_1")
+    def test_invalid_classification_threshold_rejected(self):
+        with self.assertRaises(ValueError):
+            LocalTrainingConfig.from_dict(_base_dict(classification_threshold=1.0))
+
+    def test_invalid_fraud_weight_rejected(self):
+        with self.assertRaises(ValueError):
+            LocalTrainingConfig.from_dict(_base_dict(fraud_weight=0.0))
 
 
 if __name__ == "__main__":

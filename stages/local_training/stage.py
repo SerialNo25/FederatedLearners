@@ -32,10 +32,9 @@ class LocalTrainingStage(Stage):
         self.model_factory = model_factory
 
     def execute(self) -> Path:
-        selected_institution = self.config.selected_institution
         dataset = load_institution_dataset(
-            institution_id=selected_institution.institution_id,
-            csv_path=selected_institution.dataset_path,
+            institution_id=self.config.institution_id,
+            csv_path=self.config.dataset_path,
         )
         if not dataset.features or not dataset.labels:
             raise RuntimeError(

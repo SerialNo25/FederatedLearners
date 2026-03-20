@@ -15,6 +15,10 @@ from stages.local_training.stage import LocalTrainingStage
 def run_local_training(config_path: str | Path) -> Path:
     path = Path(config_path)
     config_dict = tomli.loads(path.read_text(encoding="utf-8"))
+
+    model_dict = tomli.loads(Path(config_dict.pop("model_config")).read_text(encoding="utf-8"))
+    config_dict["model"] = model_dict
+
     config = LocalTrainingConfig.from_dict(config_dict)
 
     experiment_dir = config.output_dir / config.experiment_name

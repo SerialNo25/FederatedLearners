@@ -4,28 +4,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
-from domain.models.model_registry import MODEL_REGISTRY
-from stages.federated_training.config import InstitutionConfig, ModelConfig
+from domain.models.model_config import ModelConfig, validate_model_config
 
 
 class LocalTrainingConfig(BaseModel):
-    """Local-training configuration that is intentionally compatible with federated config files."""
-
-    model_config = ConfigDict(frozen=True, extra="ignore")
+    model_config = ConfigDict(frozen=True)
 
     experiment_name: str = "local_single_institution"
     output_dir: Path = Path("data/experiments")
-    institutions: list[InstitutionConfig] = Field(default_factory=list)
+    institution_id: str
+    dataset_path: Path
     local_epochs: int
     learning_rate: float
-    model: ModelConfig
     fraud_weight: float = 100.0
     batch_size: int = 256
-    seed: int = 42
     classification_threshold: float = 0.5
-    local_institution_id: str | None = None
+    seed: int = 42
+    model: ModelConfig
 
     @field_validator("local_epochs")
     @classmethod
@@ -65,36 +62,7 @@ class LocalTrainingConfig(BaseModel):
     @field_validator("model")
     @classmethod
     def _validate_model_type(cls, value: ModelConfig) -> ModelConfig:
-        if not MODEL_REGISTRY.has(value.model_type):
-            valid_model_types = ", ".join(MODEL_REGISTRY.list_model_types())
-            raise ValueError(f"model_type must be one of: {valid_model_types}")
-        return value
-
-    @model_validator(mode="after")
-    def _validate_institutions(self) -> "LocalTrainingConfig":
-        if not self.institutions:
-            raise ValueError("At least one institution must be configured")
-
-        ids = [institution.institution_id for institution in self.institutions]
-        if len(ids) != len(set(ids)):
-            raise ValueError("Institution IDs must be unique")
-
-        if self.local_institution_id is not None and self.local_institution_id not in ids:
-            raise ValueError(
-                f"local_institution_id '{self.local_institution_id}' does not match any configured institution"
-            )
-
-        return self
-
-    @property
-    def selected_institution(self) -> InstitutionConfig:
-        if self.local_institution_id is None:
-            return self.institutions[0]
-        return next(
-            institution
-            for institution in self.institutions
-            if institution.institution_id == self.local_institution_id
-        )
+        return validate_model_config(value)
 
     @classmethod
     def from_dict(cls, payload: dict) -> "LocalTrainingConfig":
