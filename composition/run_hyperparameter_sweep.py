@@ -46,6 +46,7 @@ MODEL_CONFIG = {
 
 INSTITUTION_ID = "bank_3"
 DATASET_PATH = Path(f"configs/sample_data/{INSTITUTION_ID}.csv")
+SEED = 42
 OUTPUT_DIR = Path("data/experiments")
 
 
@@ -78,11 +79,11 @@ def run_sweep() -> list[SweepResult]:
         institution_id=INSTITUTION_ID,
         csv_path=DATASET_PATH,
     )
-    train_dataset, val_dataset = split_dataset(dataset, val_fraction=0.2, seed=42)
+    train_dataset, val_dataset = split_dataset(dataset, val_fraction=0.2, seed=SEED)
 
     if SUBSAMPLE_FRACTION < 1.0:
         # Stratified subsample of training data only — val set stays full for fair evaluation
-        train_dataset, _ = split_dataset(train_dataset, val_fraction=1.0 - SUBSAMPLE_FRACTION, seed=42)
+        train_dataset, _ = split_dataset(train_dataset, val_fraction=1.0 - SUBSAMPLE_FRACTION, seed=SEED)
 
     n_fraud_train = sum(train_dataset.labels)
     n_fraud_val = sum(val_dataset.labels)
@@ -103,7 +104,7 @@ def run_sweep() -> list[SweepResult]:
             flush=True,
         )
 
-        torch.manual_seed(42)
+        torch.manual_seed(SEED)
         model_factory = MODEL_REGISTRY.get_factory("tabnet", MODEL_CONFIG)
         model = model_factory(len(train_dataset.features[0]))
 
@@ -118,7 +119,6 @@ def run_sweep() -> list[SweepResult]:
                 proximal_mu=0.0,
                 fraud_weight=fraud_weight,
                 batch_size=BATCH_SIZE,
-                seed=42,
             ),
         )
         elapsed = time.perf_counter() - t0
