@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import csv
+import random
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Tuple
 
 from domain.dataset.schema import ALL_COLUMNS, FEATURE_COLUMNS, TARGET_COLUMN
 
@@ -57,3 +59,34 @@ def load_institution_dataset(institution_id: str, csv_path: str | Path) -> Insti
         features=features,
         labels=labels,
     )
+
+
+def split_dataset(
+    dataset: InstitutionDataset,
+    val_fraction: float = 0.2,
+    seed: int = 42,
+) -> Tuple[InstitutionDataset, InstitutionDataset]:
+    """Stratified train/val split preserving class ratios."""
+    rng = random.Random(seed)
+
+    indices_by_class: dict[int, list[int]] = {}
+    for i, label in enumerate(dataset.labels):
+        indices_by_class.setdefault(label, []).append(i)
+
+    train_indices: list[int] = []
+    val_indices: list[int] = []
+    for indices in indices_by_class.values():
+        shuffled = indices[:]
+        rng.shuffle(shuffled)
+        n_val = max(1, round(len(shuffled) * val_fraction))
+        val_indices.extend(shuffled[:n_val])
+        train_indices.extend(shuffled[n_val:])
+
+    def _subset(idx: list[int]) -> InstitutionDataset:
+        return InstitutionDataset(
+            institution_id=dataset.institution_id,
+            features=[dataset.features[i] for i in idx],
+            labels=[dataset.labels[i] for i in idx],
+        )
+
+    return _subset(train_indices), _subset(val_indices)

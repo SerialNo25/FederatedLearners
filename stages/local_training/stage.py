@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from domain.dataset.dataset_loader import load_institution_dataset
+from domain.dataset.dataset_loader import load_institution_dataset, split_dataset
 from domain.federated.model_artifact_writer import ModelArtifactWriter
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import evaluate_institution
@@ -40,9 +40,14 @@ class LocalTrainingStage(Stage):
                 f"Institution dataset '{dataset.institution_id}' is empty; at least one row is required"
             )
 
+        train_dataset, val_dataset = split_dataset(dataset, val_fraction=0.2)
+
         self.experiment_logger.info(f"start_time={datetime.now(timezone.utc).isoformat()}")
         self.experiment_logger.info(f"config={json.dumps(self.config.to_dict(), indent=2)}")
         self.experiment_logger.info(f"local_institution={dataset.institution_id}")
+        self.experiment_logger.info(
+            f"dataset_split train={len(train_dataset.features)} val={len(val_dataset.features)}"
+        )
 
         model = self.model_factory(len(dataset.features[0]))
         model_device = getattr(model, "device", None)
@@ -51,15 +56,15 @@ class LocalTrainingStage(Stage):
 
         final_train_loss = train_local_model(
             model=model,
-            features=dataset.features,
-            labels=dataset.labels,
+            features=train_dataset.features,
+            labels=train_dataset.labels,
             config=TrainingConfig(
                 learning_rate=self.config.learning_rate,
                 local_epochs=self.config.local_epochs,
                 proximal_mu=0.0,
             ),
         )
-        evaluation = evaluate_institution(model, dataset)
+        evaluation = evaluate_institution(model, val_dataset)
 
         self.experiment_logger.write_metrics(
             step="local_training",
@@ -69,15 +74,15 @@ class LocalTrainingStage(Stage):
                 "val_loss": evaluation.loss,
                 "metrics": {
                     "institution_id": evaluation.institution_id,
-                    "loss": evaluation.loss,
-                    "accuracy": evaluation.accuracy,
+                    "val_loss": evaluation.loss,
+                    "val_accuracy": evaluation.accuracy,
                 },
                 "learning_rate": self.config.learning_rate,
             },
         )
         self.experiment_logger.info(
             f"local_training_complete institution={evaluation.institution_id} "
-            f"loss={evaluation.loss:.6f} accuracy={evaluation.accuracy:.6f}"
+            f"val_loss={evaluation.loss:.6f} val_accuracy={evaluation.accuracy:.6f}"
         )
 
         (self.experiment_dir / "config.json").write_text(
