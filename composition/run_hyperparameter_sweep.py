@@ -12,6 +12,8 @@ from __future__ import annotations
 import csv
 import itertools
 import time
+
+import torch
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -101,6 +103,7 @@ def run_sweep() -> list[SweepResult]:
             flush=True,
         )
 
+        torch.manual_seed(42)
         model_factory = MODEL_REGISTRY.get_factory("tabnet", MODEL_CONFIG)
         model = model_factory(len(train_dataset.features[0]))
 

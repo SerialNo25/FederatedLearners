@@ -6,6 +6,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import torch
+
 from domain.dataset.dataset_loader import load_institution_dataset, split_dataset
 from domain.federated.model_artifact_writer import ModelArtifactWriter
 from domain.logging.experiment_logger import StageExperimentLogger
@@ -40,7 +42,7 @@ class LocalTrainingStage(Stage):
                 f"Institution dataset '{dataset.institution_id}' is empty; at least one row is required"
             )
 
-        train_dataset, val_dataset = split_dataset(dataset, val_fraction=0.2)
+        train_dataset, val_dataset = split_dataset(dataset, seed=self.config.seed, val_fraction=0.2)
 
         self.experiment_logger.info(f"start_time={datetime.now(timezone.utc).isoformat()}")
         self.experiment_logger.info(f"config={json.dumps(self.config.to_dict(), indent=2)}")
@@ -52,6 +54,7 @@ class LocalTrainingStage(Stage):
             f"fraud_weight={self.config.fraud_weight} classification_threshold={self.config.classification_threshold}"
         )
 
+        torch.manual_seed(self.config.seed)
         model = self.model_factory(len(dataset.features[0]))
         model_device = getattr(model, "device", None)
         if model_device is not None:
@@ -83,6 +86,9 @@ class LocalTrainingStage(Stage):
                 "epoch": self.config.local_epochs,
                 "train_loss": final_train_loss,
                 "val_loss": evaluation.loss,
+                "learning_rate": self.config.learning_rate,
+                "classification_threshold": self.config.classification_threshold,
+                "seed": self.config.seed
                 "metrics": {
                     "institution_id": evaluation.institution_id,
                     "val_loss": evaluation.loss,
@@ -90,9 +96,7 @@ class LocalTrainingStage(Stage):
                     "val_precision": evaluation.precision,
                     "val_recall": evaluation.recall,
                     "val_f1": evaluation.f1,
-                },
-                "learning_rate": self.config.learning_rate,
-                "classification_threshold": self.config.classification_threshold
+                }
             },
         )
         self.experiment_logger.info(
