@@ -9,6 +9,7 @@ from pathlib import Path
 
 import torch
 
+from domain.dataset.schema import FEATURE_COLUMNS, TARGET_COLUMN
 from domain.models.model_registry import MODEL_REGISTRY, ModelOptions
 from domain.training.trainer import binary_cross_entropy
 
@@ -20,36 +21,27 @@ class InferenceBatch:
 
 
 class InferenceDataLoader:
-    """Loads and validates CSV rows for inference."""
+    """Loads and validates CSV rows for inference using the shared training schema."""
 
-    def load_csv(
-        self,
-        *,
-        input_data_path: Path,
-        feature_columns: list[str],
-        label_column: str | None,
-    ) -> InferenceBatch:
+    def load_csv(self, *, input_data_path: Path) -> InferenceBatch:
         if not input_data_path.exists():
             raise FileNotFoundError(f"Inference input data not found: {input_data_path}")
 
         with input_data_path.open("r", newline="", encoding="utf-8") as handle:
             reader = csv.DictReader(handle)
             header = reader.fieldnames or []
-            required_columns = list(feature_columns)
-            if label_column is not None:
-                required_columns.append(label_column)
-
-            missing = [column for column in required_columns if column not in header]
+            missing = [column for column in FEATURE_COLUMNS if column not in header]
             if missing:
                 raise ValueError(
                     f"{input_data_path} is missing required inference columns: {missing}. Header columns: {header}"
                 )
 
+            labels_available = TARGET_COLUMN in header
             features: list[list[float]] = []
             labels: list[int] = []
             for row_number, row in enumerate(reader, start=2):
                 try:
-                    feature_row = [float(row[column]) for column in feature_columns]
+                    feature_row = [float(row[column]) for column in FEATURE_COLUMNS]
                 except (TypeError, ValueError) as exc:
                     raise ValueError(
                         f"{input_data_path}:{row_number} contains non-numeric feature values"
@@ -57,9 +49,9 @@ class InferenceDataLoader:
 
                 features.append(feature_row)
 
-                if label_column is not None:
+                if labels_available:
                     try:
-                        label = int(float(row[label_column]))
+                        label = int(float(row[TARGET_COLUMN]))
                     except (TypeError, ValueError) as exc:
                         raise ValueError(
                             f"{input_data_path}:{row_number} contains non-numeric label values"
@@ -73,7 +65,7 @@ class InferenceDataLoader:
         if not features:
             raise ValueError("input_data_path must contain at least one data row")
 
-        return InferenceBatch(features=features, labels=labels if label_column is not None else None)
+        return InferenceBatch(features=features, labels=labels if labels_available else None)
 
 
 class CheckpointParameterLoader:
@@ -136,4 +128,3 @@ class InferenceService:
             metrics["accuracy"] = matches / len(input_batch.labels)
 
         return predictions, metrics
-

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from domain.dataset.schema import FEATURE_COLUMNS, TARGET_COLUMN
 from domain.inference.inference_service import (
     CheckpointParameterLoader,
     InferenceDataLoader,
@@ -33,11 +34,7 @@ class InferenceStage(Stage):
         self.checkpoint_loader = checkpoint_loader
 
     def execute(self) -> Path:
-        input_batch = self.data_loader.load_csv(
-            input_data_path=self.config.input_data_path,
-            feature_columns=self.config.feature_columns,
-            label_column=self.config.label_column,
-        )
+        input_batch = self.data_loader.load_csv(input_data_path=self.config.input_data_path)
 
         model_config = self.config.to_dict()
 
@@ -50,7 +47,7 @@ class InferenceStage(Stage):
             model_config=model_config,
             input_batch=input_batch,
             checkpoint_parameters=checkpoint_parameters,
-            num_features=len(self.config.feature_columns),
+            num_features=len(FEATURE_COLUMNS),
         )
 
         if metrics.get("device"):
@@ -60,8 +57,8 @@ class InferenceStage(Stage):
             "checkpoint_path": str(self.config.checkpoint_path),
             "input_data_path": str(self.config.input_data_path),
             "model_type": self.config.model_type,
-            "feature_columns": self.config.feature_columns,
-            "label_column": self.config.label_column,
+            "feature_columns": FEATURE_COLUMNS,
+            "label_column": TARGET_COLUMN if input_batch.labels is not None else None,
             "predictions": predictions,
             "metrics": metrics,
         }

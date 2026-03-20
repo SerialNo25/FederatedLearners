@@ -4,7 +4,7 @@ import unittest
 
 
 class InferenceStageArchitectureTests(unittest.TestCase):
-    def test_inference_config_exposes_file_and_label_fields(self):
+    def test_inference_config_only_requires_paths_and_model_settings(self):
         source = Path("stages/inference/config.py").read_text(encoding="utf-8")
         module = ast.parse(source)
 
@@ -16,8 +16,9 @@ class InferenceStageArchitectureTests(unittest.TestCase):
                         field_names.add(item.target.id)
 
         self.assertIn("input_data_path", field_names)
-        self.assertIn("label_column", field_names)
-        self.assertIn("feature_columns", field_names)
+        self.assertIn("checkpoint_path", field_names)
+        self.assertNotIn("label_column", field_names)
+        self.assertNotIn("feature_columns", field_names)
         self.assertNotIn("tabnet_device", field_names)
 
     def test_inference_stage_orchestrates_domain_services(self):
@@ -27,10 +28,13 @@ class InferenceStageArchitectureTests(unittest.TestCase):
         has_csv_usage = False
         service_calls = {"load_csv": False, "load": False, "run": False}
         uses_device_selector = False
+        uses_shared_schema = False
 
         for node in ast.walk(module):
             if isinstance(node, ast.Name) and node.id == "DeviceSelector":
                 uses_device_selector = True
+            if isinstance(node, ast.Name) and node.id in {"FEATURE_COLUMNS", "TARGET_COLUMN"}:
+                uses_shared_schema = True
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
                 if isinstance(node.func.value, ast.Name) and node.func.value.id == "csv":
                     has_csv_usage = True
@@ -39,6 +43,7 @@ class InferenceStageArchitectureTests(unittest.TestCase):
 
         self.assertFalse(has_csv_usage)
         self.assertFalse(uses_device_selector)
+        self.assertTrue(uses_shared_schema)
         self.assertTrue(all(service_calls.values()))
         self.assertIn("tabnet_device_selection selected=", source)
 
@@ -50,8 +55,11 @@ class InferenceStageArchitectureTests(unittest.TestCase):
         has_torch_load = False
         computes_accuracy = False
         computes_loss = False
+        uses_shared_schema = False
 
         for node in ast.walk(module):
+            if isinstance(node, ast.Name) and node.id in {"FEATURE_COLUMNS", "TARGET_COLUMN"}:
+                uses_shared_schema = True
             if isinstance(node, ast.Call):
                 if isinstance(node.func, ast.Attribute):
                     if isinstance(node.func.value, ast.Name) and node.func.value.id == "csv":
@@ -69,6 +77,7 @@ class InferenceStageArchitectureTests(unittest.TestCase):
         self.assertTrue(has_torch_load)
         self.assertTrue(computes_accuracy)
         self.assertTrue(computes_loss)
+        self.assertTrue(uses_shared_schema)
 
 
 if __name__ == "__main__":
