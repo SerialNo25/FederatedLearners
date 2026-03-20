@@ -8,7 +8,6 @@ proximal_mu = 0.01
 fraud_weight = 10
 classification_threshold = 0.5
 local_institution_id = "bank_1"
-seed = 41
 
 [[institutions]]
 institution_id = "bank_1"

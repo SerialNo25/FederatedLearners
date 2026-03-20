@@ -69,8 +69,7 @@ class LocalTrainingStage(Stage):
                 local_epochs=self.config.local_epochs,
                 proximal_mu=0.0,
                 fraud_weight=self.config.fraud_weight,
-                batch_size=self.config.batch_size,
-                seed=self.config.seed,
+                batch_size=self.config.batch_size
             ),
         )
         evaluation = evaluate_institution(
@@ -88,7 +87,6 @@ class LocalTrainingStage(Stage):
                 "val_loss": evaluation.loss,
                 "learning_rate": self.config.learning_rate,
                 "classification_threshold": self.config.classification_threshold,
-                "seed": self.config.seed
                 "metrics": {
                     "institution_id": evaluation.institution_id,
                     "val_loss": evaluation.loss,
