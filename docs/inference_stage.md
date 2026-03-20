@@ -10,6 +10,7 @@ Current implementation follows the repository layering rules:
 - **Composition root (`composition/run_inference.py`)** loads TOML config, validates with `InferenceConfig`, and explicitly wires dependencies (`InferenceService`, `InferenceDataLoader`, and `CheckpointParameterLoader`).
 - **Stage layer (`stages/inference/stage.py`)** orchestrates workflow only: logger creation, optional device selection, domain-service calls, and artifact persistence.
 - **Domain layer (`domain/inference/inference_service.py`)** contains reusable inference logic: CSV validation/loading, checkpoint parsing, prediction execution, and optional loss/accuracy computation.
+- **Shared schema (`domain/dataset/schema.py`)** defines the feature and target columns used by both training and inference so every stage reads the same dataset contract.
 
 This resolves prior layering concerns where stage orchestration mixed domain concerns (CSV parsing, checkpoint decoding, and metric calculations) directly into stage code.
 
@@ -32,9 +33,9 @@ or:
 - `checkpoint_path`: path to `model.pt` checkpoint persisted by training stages (torch-saved payload containing `model_type` and `parameters`).
 - `model_type`: model registered in `domain/models/model_registry.py` (for example `tabnet`).
 - `input_data_path`: CSV file containing feature rows to score.
-- `feature_columns`: ordered list of feature columns to read from the CSV.
-- `label_column` (optional): if provided (for example `Class`), the stage computes quality metrics (`loss` and `accuracy`) in addition to predictions.
 - TabNet architecture fields (`tabnet_*`) for rebuilding the model before loading checkpoint parameters.
+
+Inference now reads feature columns from `domain/dataset/schema.py`. If the CSV also includes the shared target column, the stage computes quality metrics (`loss` and `accuracy`) in addition to predictions; otherwise it produces predictions only.
 
 ## Outputs
 
