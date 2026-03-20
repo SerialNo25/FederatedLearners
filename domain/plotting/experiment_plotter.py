@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from bisect import bisect_right
 from dataclasses import dataclass
 from math import ceil
 from pathlib import Path
 from statistics import mean
+
+from tqdm import tqdm
 
 from domain.metrics.evaluation import InstitutionMetrics
 
@@ -536,13 +539,13 @@ class ExperimentPlotter:
         field_name: str,
     ) -> list[float]:
         interpolated_curves = []
-        for evaluation in evaluations:
+        for evaluation in tqdm(evaluations):
             source_thresholds = evaluation.thresholds
             source_values = getattr(evaluation, field_name)
             interpolated_curves.append(
-                [self._interpolate(source_thresholds, source_values, threshold) for threshold in threshold_grid]
+                [self._interpolate(source_thresholds, source_values, threshold) for threshold in tqdm(threshold_grid)]
             )
-        return [mean(values) for values in zip(*interpolated_curves)]
+        return [mean(values) for values in tqdm(zip(*interpolated_curves))]
 
     @staticmethod
     def _interpolate(x_values: list[float], y_values: list[float], target_x: float) -> float:
@@ -550,15 +553,18 @@ class ExperimentPlotter:
             return y_values[0]
         if target_x >= x_values[-1]:
             return y_values[-1]
-        for left_index in range(len(x_values) - 1):
-            left_x = x_values[left_index]
-            right_x = x_values[left_index + 1]
-            if left_x <= target_x <= right_x:
-                if right_x == left_x:
-                    return y_values[left_index]
-                ratio = (target_x - left_x) / (right_x - left_x)
-                return y_values[left_index] + ratio * (y_values[left_index + 1] - y_values[left_index])
-        return y_values[-1]
+
+        right_index = bisect_right(x_values, target_x)
+        left_index = right_index - 1
+
+        left_x = x_values[left_index]
+        right_x = x_values[right_index]
+
+        if right_x == left_x:
+            return y_values[left_index]
+
+        ratio = (target_x - left_x) / (right_x - left_x)
+        return y_values[left_index] + ratio * (y_values[right_index] - y_values[left_index])
 
     @staticmethod
     def _metric_for_client(evaluations: list[InstitutionMetrics], client_id: str) -> InstitutionMetrics:
