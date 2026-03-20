@@ -90,3 +90,15 @@ def split_dataset(
         )
 
     return _subset(train_indices), _subset(val_indices)
+
+
+def write_institution_dataset(dataset: InstitutionDataset, path: Path) -> None:
+    """Write a dataset back to CSV with the standard schema."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=ALL_COLUMNS)
+        writer.writeheader()
+        for features, label in zip(dataset.features, dataset.labels):
+            row = {col: features[i] for i, col in enumerate(FEATURE_COLUMNS)}
+            row[TARGET_COLUMN] = label
+            writer.writerow(row)

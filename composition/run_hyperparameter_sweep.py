@@ -45,7 +45,7 @@ MODEL_CONFIG = {
 }
 
 INSTITUTION_ID = "bank_3"
-DATASET_PATH = Path(f"configs/sample_data/{INSTITUTION_ID}.csv")
+DATASET_PATH = Path(f"data/train_test_splits/{INSTITUTION_ID}_train.csv")
 SEED = 42
 OUTPUT_DIR = Path("data/experiments")
 
