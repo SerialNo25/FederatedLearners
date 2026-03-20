@@ -11,6 +11,7 @@ from domain.federated.model_artifact_writer import ModelArtifactWriter
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import evaluate_institution
 from domain.models.model_registry import ModelFactoryProtocol
+from domain.plotting.experiment_plotter import ExperimentPlotter, LocalEpochRecord
 from domain.training.trainer import TrainingConfig, train_local_model
 from stages.local_training.config import LocalTrainingConfig
 from stages.stage import Stage
@@ -54,6 +55,18 @@ class LocalTrainingStage(Stage):
         if model_device is not None:
             self.experiment_logger.info(f"tabnet_device_selection selected={model_device}")
 
+        epoch_records: list[LocalEpochRecord] = []
+
+        def _record_epoch(epoch_index: int, train_loss: float) -> None:
+            validation = evaluate_institution(model, val_dataset)
+            epoch_records.append(
+                LocalEpochRecord(
+                    epoch=epoch_index,
+                    train_loss=train_loss,
+                    validation=validation,
+                )
+            )
+
         final_train_loss = train_local_model(
             model=model,
             features=train_dataset.features,
@@ -63,8 +76,9 @@ class LocalTrainingStage(Stage):
                 local_epochs=self.config.local_epochs,
                 proximal_mu=0.0,
             ),
+            epoch_callback=_record_epoch,
         )
-        evaluation = evaluate_institution(model, val_dataset)
+        evaluation = epoch_records[-1].validation if epoch_records else evaluate_institution(model, val_dataset)
 
         self.experiment_logger.write_metrics(
             step="local_training",
@@ -76,14 +90,21 @@ class LocalTrainingStage(Stage):
                     "institution_id": evaluation.institution_id,
                     "val_loss": evaluation.loss,
                     "val_accuracy": evaluation.accuracy,
+                    "pr_auc": evaluation.pr_auc,
+                    "best_f1": evaluation.best_f1,
+                    "best_threshold": evaluation.best_threshold,
                 },
                 "learning_rate": self.config.learning_rate,
             },
         )
         self.experiment_logger.info(
             f"local_training_complete institution={evaluation.institution_id} "
-            f"val_loss={evaluation.loss:.6f} val_accuracy={evaluation.accuracy:.6f}"
+            f"val_loss={evaluation.loss:.6f} val_accuracy={evaluation.accuracy:.6f} "
+            f"pr_auc={evaluation.pr_auc:.6f} best_f1={evaluation.best_f1:.6f}"
         )
+
+        plotter = ExperimentPlotter(self.experiment_dir)
+        plotter.write_local_training_plots(dataset.institution_id, epoch_records)
 
         (self.experiment_dir / "config.json").write_text(
             json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"

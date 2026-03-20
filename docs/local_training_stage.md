@@ -48,3 +48,9 @@ The stage writes artifacts under `data/experiments/<experiment_name>/`:
 - `train.log`
 - `metrics.jsonl`
 - `model.pt`
+- `loss_plot.svg`
+- `pr_auc.svg`
+- `f1_optimal_threshold.svg`
+- `threshold_curves.svg`
+- `per_client_performance_boxplots.svg`
+- `global_vs_local_convergence.svg`

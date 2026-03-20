@@ -31,8 +31,29 @@ class FederatedRoundReporter:
         local_parameter_delta_l2 = {
             update.institution_id: update.parameter_delta_l2 for update in updates
         }
+        local_pr_auc = {
+            update.institution_id: update.local_evaluation.pr_auc
+            for update in updates
+            if update.local_evaluation is not None
+        }
+        local_best_f1 = {
+            update.institution_id: update.local_evaluation.best_f1
+            for update in updates
+            if update.local_evaluation is not None
+        }
+        local_best_threshold = {
+            update.institution_id: update.local_evaluation.best_threshold
+            for update in updates
+            if update.local_evaluation is not None
+        }
         eval_payload = {
-            metric.institution_id: {"loss": metric.loss, "accuracy": metric.accuracy}
+            metric.institution_id: {
+                "loss": metric.loss,
+                "accuracy": metric.accuracy,
+                "pr_auc": metric.pr_auc,
+                "best_f1": metric.best_f1,
+                "best_threshold": metric.best_threshold,
+            }
             for metric in evaluations
         }
         metrics_payload = {
@@ -43,6 +64,11 @@ class FederatedRoundReporter:
                 "local_loss": local_loss,
                 "local_num_samples": local_num_samples,
                 "local_parameter_delta_l2": local_parameter_delta_l2,
+                "local_pr_auc": local_pr_auc,
+                "local_best_f1": local_best_f1,
+                "local_best_threshold": local_best_threshold,
+                "global_mean_pr_auc": sum(metric.pr_auc for metric in evaluations) / len(evaluations),
+                "global_mean_best_f1": sum(metric.best_f1 for metric in evaluations) / len(evaluations),
                 "institution_evaluation": eval_payload,
             },
             "learning_rate": learning_rate,
@@ -64,7 +90,11 @@ class FederatedRoundReporter:
     def _summary_line(round_index: int, evaluations: list[InstitutionMetrics]) -> str:
         round_loss = sum(metric.loss for metric in evaluations) / len(evaluations)
         round_accuracy = sum(metric.accuracy for metric in evaluations) / len(evaluations)
-        return f"round={round_index} mean_loss={round_loss:.6f} mean_accuracy={round_accuracy:.6f}"
+        round_pr_auc = sum(metric.pr_auc for metric in evaluations) / len(evaluations)
+        return (
+            f"round={round_index} mean_loss={round_loss:.6f} "
+            f"mean_accuracy={round_accuracy:.6f} mean_pr_auc={round_pr_auc:.6f}"
+        )
 
     @staticmethod
     def _institution_lines(
@@ -76,14 +106,18 @@ class FederatedRoundReporter:
             evaluation.institution_id: evaluation for evaluation in evaluations
         }
         return [
-            "round=%s institution=%s local_loss=%.6f eval_loss=%.6f eval_accuracy=%.6f "
-            "num_samples=%s parameter_delta_l2=%.6f"
+            "round=%s institution=%s local_loss=%.6f local_pr_auc=%.6f eval_loss=%.6f "
+            "eval_accuracy=%.6f eval_pr_auc=%.6f best_f1=%.6f threshold=%.6f num_samples=%s parameter_delta_l2=%.6f"
             % (
                 round_index,
                 update.institution_id,
                 update.local_loss,
+                update.local_evaluation.pr_auc if update.local_evaluation is not None else 0.0,
                 evaluation_by_institution[update.institution_id].loss,
                 evaluation_by_institution[update.institution_id].accuracy,
+                evaluation_by_institution[update.institution_id].pr_auc,
+                evaluation_by_institution[update.institution_id].best_f1,
+                evaluation_by_institution[update.institution_id].best_threshold,
                 update.num_samples,
                 update.parameter_delta_l2,
             )

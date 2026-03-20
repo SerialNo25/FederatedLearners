@@ -8,6 +8,7 @@ import numpy as np
 
 from domain.dataset.dataset_loader import InstitutionDataset
 from domain.federated.model_parameters import get_model_parameters
+from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
 from domain.models.federated_model_protocol import FederatedModelProtocol
 from domain.models.model_registry import ModelFactoryProtocol
 from domain.training.trainer import TrainingConfig, train_local_model
@@ -20,6 +21,7 @@ class InstitutionUpdate:
     parameters: dict[str, list[float]]
     local_loss: float
     parameter_delta_l2: float
+    local_evaluation: InstitutionMetrics | None = None
 
 
 class InstitutionNode:
@@ -52,6 +54,7 @@ class InstitutionNode:
         )
         local_parameters = get_model_parameters(local_model)
         parameter_delta_l2 = self._parameter_delta_l2(local_parameters, global_parameters)
+        local_evaluation = evaluate_institution(local_model, self.dataset)
 
         return InstitutionUpdate(
             institution_id=self.institution_id,
@@ -59,6 +62,7 @@ class InstitutionNode:
             parameters=local_parameters,
             local_loss=local_loss,
             parameter_delta_l2=parameter_delta_l2,
+            local_evaluation=local_evaluation,
         )
 
     @staticmethod

@@ -5,18 +5,22 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+
+import torch
 from tqdm import tqdm
 
 from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
 from domain.federated.fedprox_orchestrator import (
-    InstitutionNode,
     FedProxOrchestrator,
+    InstitutionNode,
 )
 from domain.federated.model_artifact_writer import ModelArtifactWriter
 from domain.logging.experiment_logger import StageExperimentLogger
+from domain.metrics.aggregation import weighted_mean
 from domain.metrics.evaluation import evaluate_institution
 from domain.models.federated_model_protocol import FederatedModelProtocol
 from domain.models.model_registry import ModelFactoryProtocol
+from domain.plotting.experiment_plotter import ExperimentPlotter, FederatedRoundRecord
 from domain.training.trainer import TrainingConfig
 from stages.federated_training.config import FederatedTrainingConfig
 from stages.federated_training.round_reporter import FederatedRoundReporter
@@ -45,7 +49,8 @@ class FederatedTrainingStage(Stage):
         orchestrator, institutions = self._build_orchestrator(datasets)
 
         self._log_experiment_start(institutions)
-        self._run_training_rounds(orchestrator, datasets)
+        round_records = self._run_training_rounds(orchestrator, datasets)
+        ExperimentPlotter(self.experiment_dir).write_federated_training_plots(round_records)
         self._persist_artifacts(self.experiment_dir, orchestrator.global_model)
         return self.experiment_dir
 
@@ -93,7 +98,8 @@ class FederatedTrainingStage(Stage):
         self,
         orchestrator: FedProxOrchestrator,
         datasets: list[InstitutionDataset],
-    ) -> None:
+    ) -> list[FederatedRoundRecord]:
+        round_records: list[FederatedRoundRecord] = []
         for round_index in tqdm(range(1, self.config.num_rounds + 1), "federated rounds"):
             updates = orchestrator.run_round()
             evaluations = [
@@ -112,6 +118,25 @@ class FederatedTrainingStage(Stage):
             for line in round_report.institution_lines:
                 self.experiment_logger.info(line)
             self.experiment_logger.info(round_report.summary_line)
+            round_summary = {
+                "train_loss": weighted_mean(
+                    [update.local_loss for update in updates],
+                    [update.num_samples for update in updates],
+                ),
+                "global_mean_pr_auc": sum(metric.pr_auc for metric in evaluations) / len(evaluations),
+            }
+            self.experiment_logger.debug(f"round_summary={json.dumps(round_summary)}")
+            round_records.append(
+                FederatedRoundRecord(
+                    round_index=round_index,
+                    global_evaluations=evaluations,
+                    local_evaluations=[
+                        update.local_evaluation for update in updates if update.local_evaluation is not None
+                    ],
+                    local_train_loss={update.institution_id: update.local_loss for update in updates},
+                )
+            )
+        return round_records
 
     def _load_datasets(self) -> list[InstitutionDataset]:
         return [
@@ -140,4 +165,8 @@ class FederatedTrainingStage(Stage):
             checkpoint_path=experiment_dir / "model.pt",
             model_type=self.config.model.model_type,
             model=model,
+        )
+        torch.save(
+            {"experiment_name": self.config.experiment_name, "num_rounds": self.config.num_rounds},
+            experiment_dir / "training_state.pt",
         )
