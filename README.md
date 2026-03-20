@@ -49,6 +49,24 @@ See stage documentation:
 
 - `docs/local_training_stage.md`
 
+## Run evaluation
+
+```bash
+python main.py evaluation --preset default
+```
+
+Helper script:
+
+```bash
+./scripts/run_evaluation.sh
+```
+
+The evaluation stage loads a persisted `model.pt` file and a dataset CSV, then reports `loss`, `accuracy`, `precision`, `recall`, `f1`, and `pr_auc`.
+
+See stage documentation:
+
+- `docs/evaluation_stage.md`
+
 ## Run inference
 
 ```bash
