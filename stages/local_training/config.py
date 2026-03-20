@@ -23,6 +23,8 @@ class LocalTrainingConfig(BaseModel):
     model: ModelConfig
     fraud_weight: float = 100.0
     classification_threshold: float = 0.5
+    validation_fraction: float = 0.2
+    seed: int = 42
     local_institution_id: str | None = None
 
     @field_validator("local_epochs")
@@ -37,6 +39,13 @@ class LocalTrainingConfig(BaseModel):
     def _validate_learning_rate(cls, value: float) -> float:
         if value <= 0:
             raise ValueError("learning_rate must be > 0")
+        return value
+
+    @field_validator("validation_fraction")
+    @classmethod
+    def _validate_validation_fraction(cls, value: float) -> float:
+        if value <= 0 or value >= 1:
+            raise ValueError("validation_fraction must be between 0 and 1")
         return value
 
     @field_validator("model")

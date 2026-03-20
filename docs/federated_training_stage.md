@@ -33,6 +33,8 @@ Both configs expose the same fields:
 - `local_epochs`
 - `learning_rate`
 - `proximal_mu`
+- `validation_fraction`
+- `seed`
 - `[model]` (discriminated model configuration)
   - `model_type` (must match a registered model in `domain/models/model_registry.py`)
   - TabNet options (used when `model_type = "tabnet"`):
@@ -51,13 +53,20 @@ Both configs expose the same fields:
 Each institution CSV must follow this exact schema and order:
 
 ```text
-Time,V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15,V16,V17,V18,V19,V20,V21,V22,V23,V24,V25,V26,V27,V28,Amount,Class
+amount,log_amount,hour_of_day,day_of_week,is_fraud
 ```
 
 Validation enforces:
 - exact header order
 - numeric feature values
-- binary `Class` labels (`0`/`1`)
+- binary `is_fraud` labels (`0`/`1`)
+
+## Validation Semantics
+
+Each institution dataset is split into train and validation partitions before federated training
+starts. Local updates are fit on the train split, while the reported `val_*` metrics are computed on
+the held-out validation split. The split is controlled by `validation_fraction` and `seed`, making
+the round-level metrics deterministic and meaningfully comparable across runs.
 
 ## Execution
 ```bash

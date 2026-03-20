@@ -52,6 +52,24 @@ class LocalTrainingConfigTests(unittest.TestCase):
 
         self.assertEqual(config.selected_institution.institution_id, "bank_1")
 
+    def test_seed_and_validation_fraction_defaults_are_available_for_reproducibility(self):
+        config = LocalTrainingConfig.from_dict(
+            {
+                "local_epochs": 1,
+                "learning_rate": 0.01,
+                "model": {"model_type": "logistic_regression"},
+                "institutions": [
+                    {
+                        "institution_id": "bank_1",
+                        "dataset_path": "configs/sample_data/bank_1.csv",
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(config.seed, 42)
+        self.assertEqual(config.validation_fraction, 0.2)
+
 
 if __name__ == "__main__":
     unittest.main()

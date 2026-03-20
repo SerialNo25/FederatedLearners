@@ -61,6 +61,29 @@ class FederatedTrainingConfigTests(unittest.TestCase):
                 }
             )
 
+    def test_seed_and_validation_fraction_defaults_are_available_for_reproducibility(self):
+        config = FederatedTrainingConfig.from_dict(
+            {
+                "experiment_name": "exp",
+                "output_dir": "data/experiments",
+                "num_institutions": 1,
+                "num_rounds": 1,
+                "local_epochs": 1,
+                "learning_rate": 0.01,
+                "proximal_mu": 0.0,
+                "model": {"model_type": "logistic_regression"},
+                "institutions": [
+                    {
+                        "institution_id": "bank_1",
+                        "dataset_path": "configs/sample_data/bank_1.csv",
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(config.seed, 42)
+        self.assertEqual(config.validation_fraction, 0.2)
+
 
 if __name__ == "__main__":
     unittest.main()

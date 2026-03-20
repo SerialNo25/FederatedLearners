@@ -6,10 +6,11 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-import torch
 from tqdm import tqdm
 
-from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
+import torch
+
+from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset, split_dataset
 from domain.federated.fedprox_orchestrator import (
     FedProxOrchestrator,
     InstitutionNode,
@@ -21,6 +22,7 @@ from domain.metrics.evaluation import evaluate_institution
 from domain.models.federated_model_protocol import FederatedModelProtocol
 from domain.models.model_registry import ModelFactoryProtocol
 from domain.plotting.experiment_plotter import ExperimentPlotter, FederatedRoundRecord
+from domain.training.seeding import set_global_seed
 from domain.training.trainer import TrainingConfig
 from stages.federated_training.config import FederatedTrainingConfig
 from stages.federated_training.round_reporter import FederatedRoundReporter
@@ -43,13 +45,15 @@ class FederatedTrainingStage(Stage):
         self.round_reporter = round_reporter or FederatedRoundReporter()
 
     def execute(self) -> Path:
+        set_global_seed(self.config.seed)
         datasets = self._load_datasets()
         self._assert_dataset_invariants(datasets)
+        train_datasets, val_datasets = self._split_datasets(datasets)
 
-        orchestrator, institutions = self._build_orchestrator(datasets)
+        orchestrator, institutions = self._build_orchestrator(train_datasets)
 
-        self._log_experiment_start(institutions)
-        round_records = self._run_training_rounds(orchestrator, datasets)
+        self._log_experiment_start(institutions, train_datasets, val_datasets)
+        round_records = self._run_training_rounds(orchestrator, val_datasets)
         plotter = ExperimentPlotter(self.experiment_dir)
         plotter.write_federated_round_plots(round_records)
         plotter.write_federated_summary_plots(round_records)
@@ -88,6 +92,8 @@ class FederatedTrainingStage(Stage):
     def _log_experiment_start(
         self,
         institutions: list[InstitutionNode],
+        train_datasets: list[InstitutionDataset],
+        val_datasets: list[InstitutionDataset],
     ) -> None:
         self.experiment_logger.info(f"start_time={datetime.now(timezone.utc).isoformat()}")
         self.experiment_logger.info(f"config={json.dumps(self.config.to_dict(), indent=2)}")
@@ -95,17 +101,33 @@ class FederatedTrainingStage(Stage):
             "federated_topology="
             + json.dumps([institution.institution_id for institution in institutions])
         )
+        self.experiment_logger.info(
+            "validation_setup="
+            + json.dumps(
+                {
+                    "validation_fraction": self.config.validation_fraction,
+                    "seed": self.config.seed,
+                    "splits": {
+                        train_dataset.institution_id: {
+                            "train_samples": len(train_dataset.labels),
+                            "val_samples": len(val_dataset.labels),
+                        }
+                        for train_dataset, val_dataset in zip(train_datasets, val_datasets)
+                    },
+                }
+            )
+        )
 
     def _run_training_rounds(
         self,
         orchestrator: FedProxOrchestrator,
-        datasets: list[InstitutionDataset],
+        val_datasets: list[InstitutionDataset],
     ) -> list[FederatedRoundRecord]:
         round_records: list[FederatedRoundRecord] = []
         for round_index in tqdm(range(1, self.config.num_rounds + 1), "federated rounds"):
             updates = orchestrator.run_round()
             evaluations = [
-                evaluate_institution(orchestrator.global_model, dataset) for dataset in datasets
+                evaluate_institution(orchestrator.global_model, dataset) for dataset in val_datasets
             ]
             round_report = self.round_reporter.build_report(
                 round_index=round_index,
@@ -148,6 +170,22 @@ class FederatedTrainingStage(Stage):
             )
             for institution in self.config.institutions
         ]
+
+    def _split_datasets(
+        self,
+        datasets: list[InstitutionDataset],
+    ) -> tuple[list[InstitutionDataset], list[InstitutionDataset]]:
+        train_datasets: list[InstitutionDataset] = []
+        val_datasets: list[InstitutionDataset] = []
+        for index, dataset in enumerate(datasets):
+            train_dataset, val_dataset = split_dataset(
+                dataset,
+                val_fraction=self.config.validation_fraction,
+                seed=self.config.seed + index,
+            )
+            train_datasets.append(train_dataset)
+            val_datasets.append(val_dataset)
+        return train_datasets, val_datasets
 
     def _assert_dataset_invariants(self, datasets: list[InstitutionDataset]) -> None:
         if not datasets:

@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import importlib.util
 
 import numpy as np
-
-from tqdm import tqdm
 
 from domain.dataset.dataset_loader import InstitutionDataset
 from domain.training.trainer import binary_cross_entropy
 
-from sklearn.metrics import auc as sklearn_auc
-from sklearn.metrics import precision_recall_curve as sklearn_precision_recall_curve
+if importlib.util.find_spec("sklearn") is not None:
+    from sklearn.metrics import auc as sklearn_auc
+    from sklearn.metrics import precision_recall_curve as sklearn_precision_recall_curve
+else:
+    sklearn_auc = None
+    sklearn_precision_recall_curve = None
 
 @dataclass(frozen=True)
 class InstitutionMetrics:
@@ -100,9 +103,11 @@ def compute_threshold_curve(labels: list[int], probabilities: list[float]) -> Th
 
 
 def _compute_threshold_curve_sklearn(labels: list[int], probabilities: list[float]) -> ThresholdCurve:
-    print("computing thresholds")
     label_array = np.asarray(labels, dtype=np.int64)
     probability_array = np.asarray(probabilities, dtype=np.float64)
+    if sklearn_precision_recall_curve is None or sklearn_auc is None:
+        return _compute_threshold_curve_numpy(label_array, probability_array)
+
     precision, recall, thresholds = sklearn_precision_recall_curve(label_array, probability_array)
 
     f1_scores = np.divide(
@@ -130,6 +135,67 @@ def _compute_threshold_curve_sklearn(labels: list[int], probabilities: list[floa
         best_threshold = float(best_thresholds[best_index])
 
     pr_auc = float(sklearn_auc(recall[::-1], precision[::-1]))
+    return ThresholdCurve(
+        thresholds=plot_thresholds.tolist(),
+        precision=precision.tolist(),
+        recall=recall.tolist(),
+        f1_scores=f1_scores.tolist(),
+        pr_auc=pr_auc,
+        best_f1=best_f1,
+        best_threshold=best_threshold,
+    )
+
+
+def _compute_threshold_curve_numpy(
+    label_array: np.ndarray,
+    probability_array: np.ndarray,
+) -> ThresholdCurve:
+    order = np.argsort(-probability_array, kind="mergesort")
+    sorted_labels = label_array[order]
+    sorted_probabilities = probability_array[order]
+
+    total_positives = int(np.sum(sorted_labels))
+    if total_positives == 0:
+        precision = np.array([0.0], dtype=np.float64)
+        recall = np.array([0.0], dtype=np.float64)
+        thresholds = np.array([], dtype=np.float64)
+    else:
+        true_positives = np.cumsum(sorted_labels, dtype=np.float64)
+        false_positives = np.cumsum(1 - sorted_labels, dtype=np.float64)
+        distinct_indices = np.flatnonzero(np.diff(sorted_probabilities)) + 1
+        cutoff_indices = np.concatenate((distinct_indices - 1, [len(sorted_labels) - 1]))
+
+        tp = true_positives[cutoff_indices]
+        fp = false_positives[cutoff_indices]
+        thresholds = sorted_probabilities[cutoff_indices]
+
+        precision = np.concatenate(([1.0], tp / np.maximum(tp + fp, 1.0)))
+        recall = np.concatenate(([0.0], tp / total_positives))
+
+    f1_scores = np.divide(
+        2.0 * precision * recall,
+        precision + recall,
+        out=np.zeros_like(precision),
+        where=(precision + recall) > 0,
+    )
+    plot_thresholds = np.concatenate(([0.0], thresholds.astype(np.float64, copy=False)))
+
+    if len(plot_thresholds) <= 1:
+        best_f1 = 0.0
+        best_threshold = 0.5
+    else:
+        candidate_f1 = f1_scores[1:]
+        candidate_thresholds = plot_thresholds[1:]
+        max_f1 = float(np.max(candidate_f1))
+        candidate_indices = np.flatnonzero(np.isclose(candidate_f1, max_f1))
+        best_index = min(
+            candidate_indices.tolist(),
+            key=lambda index: abs(float(candidate_thresholds[index]) - 0.5),
+        )
+        best_f1 = float(candidate_f1[best_index])
+        best_threshold = float(candidate_thresholds[best_index])
+
+    pr_auc = float(np.trapezoid(precision, recall))
     return ThresholdCurve(
         thresholds=plot_thresholds.tolist(),
         precision=precision.tolist(),

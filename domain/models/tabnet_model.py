@@ -99,7 +99,6 @@ class TabNetModel(nn.Module):
         sparsity_weight: float = 1e-4,
         device: str = "cpu",
     ) -> "TabNetModel":
-        torch.manual_seed(42)
         network = _TabNetBackbone(
             n_features=n_features,
             decision_dim=decision_dim,

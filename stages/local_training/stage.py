@@ -13,6 +13,7 @@ from domain.metrics.evaluation import evaluate_institution
 from domain.models.model_registry import ModelFactoryProtocol
 from domain.plotting.experiment_plotter import ExperimentPlotter, LocalEpochRecord
 from domain.training.trainer import TrainingConfig, train_local_model
+from domain.training.seeding import set_global_seed
 from stages.local_training.config import LocalTrainingConfig
 from stages.stage import Stage
 
@@ -31,6 +32,7 @@ class LocalTrainingStage(Stage):
         self.model_factory = model_factory
 
     def execute(self) -> Path:
+        set_global_seed(self.config.seed)
         selected_institution = self.config.selected_institution
         dataset = load_institution_dataset(
             institution_id=selected_institution.institution_id,
@@ -41,7 +43,11 @@ class LocalTrainingStage(Stage):
                 f"Institution dataset '{dataset.institution_id}' is empty; at least one row is required"
             )
 
-        train_dataset, val_dataset = split_dataset(dataset, val_fraction=0.2)
+        train_dataset, val_dataset = split_dataset(
+            dataset,
+            val_fraction=self.config.validation_fraction,
+            seed=self.config.seed,
+        )
 
         self.experiment_logger.info(f"start_time={datetime.now(timezone.utc).isoformat()}")
         self.experiment_logger.info(f"config={json.dumps(self.config.to_dict(), indent=2)}")
@@ -50,7 +56,9 @@ class LocalTrainingStage(Stage):
             f"dataset_split train={len(train_dataset.features)} val={len(val_dataset.features)}"
         )
         self.experiment_logger.info(
-            f"fraud_weight={self.config.fraud_weight} classification_threshold={self.config.classification_threshold}"
+            f"fraud_weight={self.config.fraud_weight} "
+            f"classification_threshold={self.config.classification_threshold} "
+            f"validation_fraction={self.config.validation_fraction} seed={self.config.seed}"
         )
 
         model = self.model_factory(len(dataset.features[0]))
@@ -61,7 +69,12 @@ class LocalTrainingStage(Stage):
         epoch_records: list[LocalEpochRecord] = []
 
         def _record_epoch(epoch_index: int, train_loss: float) -> None:
-            validation = evaluate_institution(model, val_dataset)
+            validation = evaluate_institution(
+                model,
+                val_dataset,
+                pos_weight=self.config.fraud_weight,
+                threshold=self.config.classification_threshold,
+            )
             epoch_records.append(
                 LocalEpochRecord(
                     epoch=epoch_index,
@@ -82,7 +95,7 @@ class LocalTrainingStage(Stage):
             ),
             epoch_callback=_record_epoch,
         )
-        evaluation = evaluation = epoch_records[-1].validation if epoch_records else evaluate_institution(
+        evaluation = epoch_records[-1].validation if epoch_records else evaluate_institution(
             model,
             val_dataset,
             pos_weight=self.config.fraud_weight,

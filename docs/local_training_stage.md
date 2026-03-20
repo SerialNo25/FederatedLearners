@@ -40,6 +40,13 @@ keys (for example `num_rounds` and `proximal_mu`) and trains only one institutio
 
 If `local_institution_id` is omitted, the first entry in `[[institutions]]` is used.
 
+The stage also accepts:
+
+- `validation_fraction` to control the holdout split used for validation metrics
+- `seed` to make the train/validation split and model initialization reproducible
+- `fraud_weight` and `classification_threshold`, which are now applied consistently to both
+  per-epoch validation logging and the final evaluation payload
+
 ## Outputs
 
 The stage writes artifacts under `data/experiments/<experiment_name>/`:

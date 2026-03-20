@@ -78,7 +78,10 @@ def split_dataset(
     for indices in indices_by_class.values():
         shuffled = indices[:]
         rng.shuffle(shuffled)
-        n_val = max(1, round(len(shuffled) * val_fraction))
+        if len(shuffled) == 1:
+            n_val = 0
+        else:
+            n_val = min(len(shuffled) - 1, max(1, round(len(shuffled) * val_fraction)))
         val_indices.extend(shuffled[:n_val])
         train_indices.extend(shuffled[n_val:])
 

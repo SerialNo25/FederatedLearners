@@ -52,6 +52,8 @@ class FederatedTrainingConfig(BaseModel):
     local_epochs: int
     learning_rate: float
     proximal_mu: float
+    validation_fraction: float = 0.2
+    seed: int = 42
     model: ModelConfig
 
     @field_validator("num_rounds", "local_epochs")
@@ -73,6 +75,13 @@ class FederatedTrainingConfig(BaseModel):
     def _validate_learning_rate(cls, value: float) -> float:
         if value <= 0:
             raise ValueError("learning_rate must be > 0")
+        return value
+
+    @field_validator("validation_fraction")
+    @classmethod
+    def _validate_validation_fraction(cls, value: float) -> float:
+        if value <= 0 or value >= 1:
+            raise ValueError("validation_fraction must be between 0 and 1")
         return value
 
     @field_validator("proximal_mu")
