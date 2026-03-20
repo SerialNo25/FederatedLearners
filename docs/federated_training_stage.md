@@ -89,12 +89,19 @@ Files:
 - `train.log`
 - `metrics.jsonl`
 - `model.pt`
+- `training_state.pt`
+- `loss_plot.svg`
+- `pr_auc.svg`
+- `f1_optimal_threshold.svg`
+- `threshold_curves.svg`
+- `per_client_performance_boxplots.svg`
+- `global_vs_local_convergence.svg`
 
 `metrics.jsonl` records per round:
 - `epoch`
 - `train_loss`
 - `val_loss`
-- `metrics` (local loss, sample counts, model delta magnitudes, and per-institution evaluation)
+- `metrics` (local loss, PR-AUC, optimal-threshold F1, sample counts, model delta magnitudes, and per-institution evaluation)
 - `learning_rate`
 
 `train.log` now includes one line per institution for each federated round, including:

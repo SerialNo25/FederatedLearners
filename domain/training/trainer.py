@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 import math
 
@@ -38,6 +39,7 @@ def train_local_model(
     labels: list[int],
     config: TrainingConfig,
     global_parameters: dict[str, list[float]] | None = None,
+    epoch_callback: Callable[[int, float], None] | None = None,
 ) -> float:
     if hasattr(model, "network"):
         return _train_torch_model(
@@ -46,6 +48,7 @@ def train_local_model(
             labels=labels,
             config=config,
             global_parameters=global_parameters,
+            epoch_callback=epoch_callback,
         )
 
     return _train_manual_model(
@@ -54,6 +57,7 @@ def train_local_model(
         labels=labels,
         config=config,
         global_parameters=global_parameters,
+        epoch_callback=epoch_callback,
     )
 
 
@@ -63,6 +67,7 @@ def _train_torch_model(
     labels: list[int],
     config: TrainingConfig,
     global_parameters: dict[str, list[float]] | None,
+    epoch_callback: Callable[[int, float], None] | None,
 ) -> float:
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
@@ -81,7 +86,7 @@ def _train_torch_model(
     targets = torch.tensor(labels, dtype=torch.float32, device=model.device)
 
     final_loss = 0.0
-    for _ in tqdm(range(config.local_epochs), desc="Local epochs", leave=False):
+    for epoch_index in tqdm(range(config.local_epochs), desc="Local epochs", leave=False):
         optimizer.zero_grad()
         logits, sparsity_loss = model(inputs)
         clf_loss = criterion(logits, targets)
@@ -96,6 +101,8 @@ def _train_torch_model(
         total_loss.backward()
         optimizer.step()
         final_loss = float(total_loss.detach().cpu().item())
+        if epoch_callback is not None:
+            epoch_callback(epoch_index + 1, final_loss)
 
     return final_loss
 
@@ -106,6 +113,7 @@ def _train_manual_model(
     labels: list[int],
     config: TrainingConfig,
     global_parameters: dict[str, list[float]] | None,
+    epoch_callback: Callable[[int, float], None] | None,
 ) -> float:
     initial_parameters = global_parameters if global_parameters is not None else model.parameters()
     initial_weights = initial_parameters["weights"]
@@ -117,7 +125,7 @@ def _train_manual_model(
     if n_samples == 0:
         return 0.0
 
-    for _ in tqdm(range(config.local_epochs), desc="Local epochs", leave=False):
+    for epoch_index in tqdm(range(config.local_epochs), desc="Local epochs", leave=False):
         predictions = model.predict_proba(features)
         grad_weights = [0.0] * n_features
         grad_bias = 0.0
@@ -144,6 +152,10 @@ def _train_manual_model(
             for weight, grad in zip(model.weights, grad_weights)
         ]
         model.bias -= config.learning_rate * grad_bias
+
+        epoch_loss = binary_cross_entropy(labels, model.predict_proba(features))
+        if epoch_callback is not None:
+            epoch_callback(epoch_index + 1, epoch_loss)
 
     final_predictions = model.predict_proba(features)
     return binary_cross_entropy(labels, final_predictions, pos_weight=config.fraud_weight)
