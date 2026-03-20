@@ -6,7 +6,7 @@ local_epochs = 5
 learning_rate = 0.02
 proximal_mu = 0.01
 fraud_weight = 10
-classification_threshold = 0.5
+classification_threshold = 0.7
 local_institution_id = "bank_1"
 
 [[institutions]]

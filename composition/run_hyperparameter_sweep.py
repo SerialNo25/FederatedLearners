@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import csv
 import itertools
-import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,7 +24,7 @@ from domain.training.trainer import TrainingConfig, train_local_model
 # Search grid
 # ---------------------------------------------------------------------------
 
-FRAUD_WEIGHTS = [10, 25, 50, 100]
+FRAUD_WEIGHTS = [100, 730, 1200] # [10, 25, 50, 100]
 LEARNING_RATES = [0.005, 0.01, 0.02]
 EPOCHS = [5, 10, 25]  # mini-batch: each epoch = ~313 updates on bank_2, ~1737 on bank_1
 BATCH_SIZE = 256
@@ -43,7 +42,7 @@ MODEL_CONFIG = {
     "sparsity_weight": 0.0001,
 }
 
-INSTITUTION_ID = "bank_1"
+INSTITUTION_ID = "bank_3"
 DATASET_PATH = Path(f"configs/sample_data/{INSTITUTION_ID}.csv")
 OUTPUT_DIR = Path("data/experiments")
 
@@ -116,6 +115,7 @@ def run_sweep() -> list[SweepResult]:
                 proximal_mu=0.0,
                 fraud_weight=fraud_weight,
                 batch_size=BATCH_SIZE,
+                seed=42,
             ),
         )
         elapsed = time.perf_counter() - t0

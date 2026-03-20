@@ -23,6 +23,7 @@ class LocalTrainingConfig(BaseModel):
     model: ModelConfig
     fraud_weight: float = 100.0
     batch_size: int = 256
+    seed: int = 42
     classification_threshold: float = 0.5
     local_institution_id: str | None = None
 
@@ -38,6 +39,27 @@ class LocalTrainingConfig(BaseModel):
     def _validate_learning_rate(cls, value: float) -> float:
         if value <= 0:
             raise ValueError("learning_rate must be > 0")
+        return value
+
+    @field_validator("fraud_weight")
+    @classmethod
+    def _validate_fraud_weight(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("fraud_weight must be > 0")
+        return value
+
+    @field_validator("batch_size")
+    @classmethod
+    def _validate_batch_size(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("batch_size must be >= 1")
+        return value
+
+    @field_validator("classification_threshold")
+    @classmethod
+    def _validate_classification_threshold(cls, value: float) -> float:
+        if not 0.0 < value < 1.0:
+            raise ValueError("classification_threshold must be between 0 and 1 (exclusive)")
         return value
 
     @field_validator("model")

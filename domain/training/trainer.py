@@ -17,6 +17,7 @@ class TrainingConfig:
     proximal_mu: float = 0.0
     fraud_weight: float = 1.0
     batch_size: int = 256
+    seed: int = 42
 
 
 def binary_cross_entropy(
@@ -77,6 +78,8 @@ def _train_torch_model(
             initial_state[name] = torch.tensor(
                 global_parameters[name], dtype=tensor.dtype, device=tensor.device
             ).reshape(tensor.shape)
+
+    torch.manual_seed(config.seed)
 
     inputs = torch.tensor(features, dtype=torch.float32, device=model.device)
     targets = torch.tensor(labels, dtype=torch.float32, device=model.device)
