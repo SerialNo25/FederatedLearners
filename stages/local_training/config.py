@@ -21,6 +21,8 @@ class LocalTrainingConfig(BaseModel):
     local_epochs: int
     learning_rate: float
     model: ModelConfig
+    fraud_weight: float = 100.0
+    classification_threshold: float = 0.5
     local_institution_id: str | None = None
 
     @field_validator("local_epochs")

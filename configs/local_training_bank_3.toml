@@ -2,9 +2,11 @@ experiment_name = "local_bank_3_tabnet"
 output_dir = "data/experiments"
 num_institutions = 3
 num_rounds = 3
-local_epochs = 2
+local_epochs = 50
 learning_rate = 0.02
 proximal_mu = 0.01
+fraud_weight = 10
+classification_threshold = 0.5
 local_institution_id = "bank_3"
 
 [[institutions]]
@@ -21,8 +23,8 @@ dataset_path = "configs/sample_data/bank_3.csv"
 
 [model]
 model_type = "tabnet"
-decision_dim = 8
-attention_dim = 8
-steps = 3
+decision_dim = 16
+attention_dim = 16
+steps = 4
 relaxation_factor = 1.5
 sparsity_weight = 0.0001

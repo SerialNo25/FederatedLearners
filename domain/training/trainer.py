@@ -15,14 +15,20 @@ class TrainingConfig:
     learning_rate: float
     local_epochs: int
     proximal_mu: float = 0.0
+    fraud_weight: float = 1.0
 
 
-def binary_cross_entropy(y_true: list[int] | list[float], y_prob: list[float]) -> float:
+def binary_cross_entropy(
+    y_true: list[int] | list[float],
+    y_prob: list[float],
+    pos_weight: float = 1.0,
+) -> float:
     eps = 1e-7
     losses: list[float] = []
     for label, probability in zip(y_true, y_prob):
         probability = min(max(probability, eps), 1.0 - eps)
-        losses.append(-(label * math.log(probability) + (1.0 - label) * math.log(1.0 - probability)))
+        sample_weight = pos_weight if label == 1 else 1.0
+        losses.append(-sample_weight * (label * math.log(probability) + (1.0 - label) * math.log(1.0 - probability)))
     return sum(losses) / max(len(losses), 1)
 
 
@@ -60,7 +66,8 @@ def _train_torch_model(
 ) -> float:
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
-    criterion = nn.BCEWithLogitsLoss()
+    pos_weight = torch.tensor([config.fraud_weight], dtype=torch.float32, device=model.device)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     initial_state: dict[str, Tensor] = {}
     if global_parameters is not None and config.proximal_mu > 0.0:
@@ -116,7 +123,8 @@ def _train_manual_model(
         grad_bias = 0.0
 
         for row, label, prediction in zip(features, labels, predictions):
-            error = prediction - float(label)
+            sample_weight = config.fraud_weight if label == 1 else 1.0
+            error = sample_weight * (prediction - float(label))
             for feature_idx, value in enumerate(row):
                 grad_weights[feature_idx] += value * error
             grad_bias += error
@@ -138,4 +146,4 @@ def _train_manual_model(
         model.bias -= config.learning_rate * grad_bias
 
     final_predictions = model.predict_proba(features)
-    return binary_cross_entropy(labels, final_predictions)
+    return binary_cross_entropy(labels, final_predictions, pos_weight=config.fraud_weight)
