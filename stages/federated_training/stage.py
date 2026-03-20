@@ -50,7 +50,9 @@ class FederatedTrainingStage(Stage):
 
         self._log_experiment_start(institutions)
         round_records = self._run_training_rounds(orchestrator, datasets)
-        ExperimentPlotter(self.experiment_dir).write_federated_training_plots(round_records)
+        plotter = ExperimentPlotter(self.experiment_dir)
+        plotter.write_federated_round_plots(round_records)
+        plotter.write_federated_summary_plots(round_records)
         self._persist_artifacts(self.experiment_dir, orchestrator.global_model)
         return self.experiment_dir
 

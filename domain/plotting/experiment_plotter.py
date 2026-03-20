@@ -55,7 +55,7 @@ class ExperimentPlotter:
         self.experiment_dir = Path(experiment_dir)
         self.experiment_dir.mkdir(parents=True, exist_ok=True)
 
-    def write_local_training_plots(
+    def write_local_epoch_plots(
         self,
         institution_id: str,
         records: list[LocalEpochRecord],
@@ -71,7 +71,12 @@ class ExperimentPlotter:
             file_name="loss_plot.svg",
             series=[
                 LineSeries("Train loss", epochs, [record.train_loss for record in records], self._PALETTE[0]),
-                LineSeries("Validation loss", epochs, [record.validation.loss for record in records], self._PALETTE[1]),
+                LineSeries(
+                    "Validation loss",
+                    epochs,
+                    [record.validation.loss for record in records],
+                    self._PALETTE[1],
+                ),
             ],
         )
         self._write_line_chart(
@@ -102,6 +107,30 @@ class ExperimentPlotter:
                 )
             ],
         )
+        self._write_line_chart(
+            title=f"Convergence — {institution_id}",
+            x_label="Epoch",
+            y_label="Loss",
+            file_name="global_vs_local_convergence.svg",
+            series=[
+                LineSeries("Train loss", epochs, [record.train_loss for record in records], self._PALETTE[0]),
+                LineSeries(
+                    "Validation loss",
+                    epochs,
+                    [record.validation.loss for record in records],
+                    self._PALETTE[1],
+                ),
+            ],
+        )
+
+    def write_local_summary_plots(
+        self,
+        institution_id: str,
+        records: list[LocalEpochRecord],
+    ) -> None:
+        if not records:
+            return
+
         final_metrics = records[-1].validation
         self._write_line_chart(
             title=f"Threshold curves — {institution_id}",
@@ -134,30 +163,13 @@ class ExperimentPlotter:
                 ),
             ],
         )
-        self._write_line_chart(
-            title=f"Convergence — {institution_id}",
-            x_label="Epoch",
-            y_label="Loss",
-            file_name="global_vs_local_convergence.svg",
-            series=[
-                LineSeries("Train loss", epochs, [record.train_loss for record in records], self._PALETTE[0]),
-                LineSeries("Validation loss", epochs, [record.validation.loss for record in records], self._PALETTE[1]),
-            ],
-        )
 
-    def write_federated_training_plots(self, records: list[FederatedRoundRecord]) -> None:
+    def write_federated_round_plots(self, records: list[FederatedRoundRecord]) -> None:
         if not records:
             return
 
         rounds = [record.round_index for record in records]
-        client_ids = sorted(
-            {
-                metric.institution_id
-                for record in records
-                for metric in [*record.global_evaluations, *record.local_evaluations]
-            }
-        )
-
+        client_ids = self._client_ids(records)
         self._write_line_chart(
             title="Loss plot — federated training",
             x_label="Round",
@@ -218,7 +230,36 @@ class ExperimentPlotter:
                 ),
             ],
         )
+        convergence_series = [
+            LineSeries(
+                "Global mean eval loss",
+                rounds,
+                [mean(metric.loss for metric in record.global_evaluations) for record in records],
+                self._PALETTE[0],
+            )
+        ]
+        for index, client_id in enumerate(client_ids, start=1):
+            convergence_series.append(
+                LineSeries(
+                    f"Local {client_id} loss",
+                    rounds,
+                    [record.local_train_loss[client_id] for record in records],
+                    self._color_for_index(index),
+                )
+            )
+        self._write_line_chart(
+            title="Global vs local convergence",
+            x_label="Round",
+            y_label="Loss",
+            file_name="global_vs_local_convergence.svg",
+            series=convergence_series,
+        )
 
+    def write_federated_summary_plots(self, records: list[FederatedRoundRecord]) -> None:
+        if not records:
+            return
+
+        client_ids = self._client_ids(records)
         final_record = records[-1]
         threshold_grid = self._shared_threshold_grid(
             [*final_record.global_evaluations, *final_record.local_evaluations]
@@ -303,29 +344,14 @@ class ExperimentPlotter:
             ],
         )
 
-        convergence_series = [
-            LineSeries(
-                "Global mean eval loss",
-                rounds,
-                [mean(metric.loss for metric in record.global_evaluations) for record in records],
-                self._PALETTE[0],
-            )
-        ]
-        for index, client_id in enumerate(client_ids, start=1):
-            convergence_series.append(
-                LineSeries(
-                    f"Local {client_id} loss",
-                    rounds,
-                    [record.local_train_loss[client_id] for record in records],
-                    self._color_for_index(index),
-                )
-            )
-        self._write_line_chart(
-            title="Global vs local convergence",
-            x_label="Round",
-            y_label="Loss",
-            file_name="global_vs_local_convergence.svg",
-            series=convergence_series,
+    @staticmethod
+    def _client_ids(records: list[FederatedRoundRecord]) -> list[str]:
+        return sorted(
+            {
+                metric.institution_id
+                for record in records
+                for metric in [*record.global_evaluations, *record.local_evaluations]
+            }
         )
 
     def _write_line_chart(

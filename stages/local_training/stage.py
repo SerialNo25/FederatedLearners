@@ -104,7 +104,8 @@ class LocalTrainingStage(Stage):
         )
 
         plotter = ExperimentPlotter(self.experiment_dir)
-        plotter.write_local_training_plots(dataset.institution_id, epoch_records)
+        plotter.write_local_epoch_plots(dataset.institution_id, epoch_records)
+        plotter.write_local_summary_plots(dataset.institution_id, epoch_records)
 
         (self.experiment_dir / "config.json").write_text(
             json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
