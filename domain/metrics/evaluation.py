@@ -16,6 +16,32 @@ class InstitutionMetrics:
     precision: float
     recall: float
     f1: float
+    pr_auc: float
+
+
+def _average_precision(labels: list[int], probabilities: list[float]) -> float:
+    ranked = sorted(zip(probabilities, labels), key=lambda item: item[0], reverse=True)
+    total_positives = sum(labels)
+    if total_positives == 0:
+        return 0.0
+
+    true_positives = 0
+    false_positives = 0
+    previous_recall = 0.0
+    area = 0.0
+
+    for _, label in ranked:
+        if label == 1:
+            true_positives += 1
+        else:
+            false_positives += 1
+
+        precision = true_positives / max(true_positives + false_positives, 1)
+        recall = true_positives / total_positives
+        area += precision * max(recall - previous_recall, 0.0)
+        previous_recall = recall
+
+    return area
 
 
 def evaluate_institution(
@@ -38,6 +64,7 @@ def evaluate_institution(
     precision = tp / max(tp + fp, 1)
     recall = tp / max(tp + fn, 1)
     f1 = 2 * precision * recall / max(precision + recall, 1e-7)
+    pr_auc = _average_precision(dataset.labels, probabilities)
 
     return InstitutionMetrics(
         institution_id=dataset.institution_id,
@@ -46,4 +73,5 @@ def evaluate_institution(
         precision=precision,
         recall=recall,
         f1=f1,
+        pr_auc=pr_auc,
     )
