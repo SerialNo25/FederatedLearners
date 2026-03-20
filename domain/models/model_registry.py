@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from typing import Protocol, TypeAlias, TypedDict
 
-from domain.models.basic_model import LogisticRegressionModel
 from domain.models.device_selector import DeviceSelector
 from domain.models.federated_model_protocol import FederatedModelProtocol
 
@@ -69,15 +68,6 @@ class ModelRegistry:
 
 MODEL_REGISTRY = ModelRegistry()
 
-
-def _build_logistic_regression_model(
-    n_features: int,
-    config: ModelOptions,
-) -> FederatedModelProtocol:
-    del config
-    return LogisticRegressionModel.initialize(n_features)
-
-
 def _build_tabnet_model(n_features: int, config: ModelOptions) -> FederatedModelProtocol:
     from domain.models.tabnet_model import TabNetModel
 
@@ -100,5 +90,4 @@ def _build_tabnet_model(n_features: int, config: ModelOptions) -> FederatedModel
     )
 
 
-MODEL_REGISTRY.register("logistic_regression", _build_logistic_regression_model)
 MODEL_REGISTRY.register("tabnet", _build_tabnet_model)
