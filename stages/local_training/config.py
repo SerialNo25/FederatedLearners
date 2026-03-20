@@ -22,6 +22,7 @@ class LocalTrainingConfig(BaseModel):
     learning_rate: float
     model: ModelConfig
     fraud_weight: float = 100.0
+    batch_size: int = 256
     classification_threshold: float = 0.5
     local_institution_id: str | None = None
 

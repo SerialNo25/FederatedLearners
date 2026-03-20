@@ -66,6 +66,7 @@ class LocalTrainingStage(Stage):
                 local_epochs=self.config.local_epochs,
                 proximal_mu=0.0,
                 fraud_weight=self.config.fraud_weight,
+                batch_size=self.config.batch_size,
             ),
         )
         evaluation = evaluate_institution(

@@ -16,6 +16,7 @@ class TrainingConfig:
     local_epochs: int
     proximal_mu: float = 0.0
     fraud_weight: float = 1.0
+    batch_size: int = 256
 
 
 def binary_cross_entropy(
@@ -79,23 +80,36 @@ def _train_torch_model(
 
     inputs = torch.tensor(features, dtype=torch.float32, device=model.device)
     targets = torch.tensor(labels, dtype=torch.float32, device=model.device)
+    n = inputs.shape[0]
 
     final_loss = 0.0
     for _ in tqdm(range(config.local_epochs), desc="Local epochs", leave=False):
-        optimizer.zero_grad()
-        logits, sparsity_loss = model(inputs)
-        clf_loss = criterion(logits, targets)
-        total_loss = clf_loss + model.sparsity_weight * sparsity_loss
+        perm = torch.randperm(n, device=model.device)
+        epoch_loss = 0.0
+        n_batches = 0
 
-        if initial_state:
-            prox_term = torch.tensor(0.0, device=model.device)
-            for name, parameter in model.named_parameters():
-                prox_term = prox_term + torch.sum((parameter - initial_state[name]) ** 2)
-            total_loss = total_loss + 0.5 * config.proximal_mu * prox_term
+        for start in range(0, n, config.batch_size):
+            idx = perm[start : start + config.batch_size]
+            batch_inputs = inputs[idx]
+            batch_targets = targets[idx]
 
-        total_loss.backward()
-        optimizer.step()
-        final_loss = float(total_loss.detach().cpu().item())
+            optimizer.zero_grad()
+            logits, sparsity_loss = model(batch_inputs)
+            clf_loss = criterion(logits, batch_targets)
+            total_loss = clf_loss + model.sparsity_weight * sparsity_loss
+
+            if initial_state:
+                prox_term = torch.tensor(0.0, device=model.device)
+                for name, parameter in model.named_parameters():
+                    prox_term = prox_term + torch.sum((parameter - initial_state[name]) ** 2)
+                total_loss = total_loss + 0.5 * config.proximal_mu * prox_term
+
+            total_loss.backward()
+            optimizer.step()
+            epoch_loss += float(total_loss.detach().cpu().item())
+            n_batches += 1
+
+        final_loss = epoch_loss / max(n_batches, 1)
 
     return final_loss
 
