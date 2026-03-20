@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import ceil
 from pathlib import Path
 from statistics import mean
 
@@ -50,6 +51,8 @@ class ExperimentPlotter:
         "#4f46e5",
         "#65a30d",
     ]
+    _MAX_LINE_POINTS = 1_200
+    _MAX_POINT_MARKERS = 240
 
     def __init__(self, experiment_dir: str | Path) -> None:
         self.experiment_dir = Path(experiment_dir)
@@ -406,14 +409,16 @@ class ExperimentPlotter:
             )
 
         for index, line in enumerate(series):
+            line_points = self._prepare_line_points(line)
             points = []
-            for x_value, y_value in zip(line.x_values, line.y_values):
+            for point_index, (x_value, y_value) in enumerate(line_points):
                 x_coord = self._map_value(x_value, min_x, max_x, margin_left, margin_left + plot_width)
                 y_coord = self._map_value(y_value, min_y, max_y, margin_top + plot_height, margin_top)
                 points.append(f"{x_coord:.2f},{y_coord:.2f}")
-                elements.append(
-                    f'<circle cx="{x_coord:.2f}" cy="{y_coord:.2f}" r="3.5" fill="{line.color}" />'
-                )
+                if self._should_draw_marker(len(line_points), point_index):
+                    elements.append(
+                        f'<circle cx="{x_coord:.2f}" cy="{y_coord:.2f}" r="3.5" fill="{line.color}" />'
+                    )
             elements.append(
                 f'<polyline fill="none" stroke="{line.color}" stroke-width="2.5" points="{" ".join(points)}" />'
             )
@@ -506,6 +511,23 @@ class ExperimentPlotter:
     def _shared_threshold_grid(self, evaluations: list[InstitutionMetrics]) -> list[float]:
         thresholds = sorted({0.0, 0.5, 1.0, *[value for metric in evaluations for value in metric.thresholds]})
         return thresholds
+
+    def _prepare_line_points(self, line: LineSeries) -> list[tuple[float, float]]:
+        paired_points = list(zip(line.x_values, line.y_values))
+        if len(paired_points) <= self._MAX_LINE_POINTS:
+            return paired_points
+        step = max(1, ceil(len(paired_points) / self._MAX_LINE_POINTS))
+        sampled_points = paired_points[::step]
+        if sampled_points[-1] != paired_points[-1]:
+            sampled_points.append(paired_points[-1])
+        return sampled_points
+
+    def _should_draw_marker(self, point_count: int, point_index: int) -> bool:
+        if point_count <= self._MAX_POINT_MARKERS:
+            return True
+        marker_step = max(1, ceil(point_count / self._MAX_POINT_MARKERS))
+        return point_index % marker_step == 0 or point_index == point_count - 1
+
 
     def _mean_curve(
         self,
