@@ -26,7 +26,7 @@ from domain.training.trainer import TrainingConfig, train_local_model
 # Search grid
 # ---------------------------------------------------------------------------
 
-FRAUD_WEIGHTS = [100, 730, 1200] # [10, 25, 50, 100]
+FRAUD_WEIGHTS = [10, 25, 50, 100, 150] # [100, 730, 1200]
 LEARNING_RATES = [0.005, 0.01, 0.02]
 EPOCHS = [5, 10, 25]  # mini-batch: each epoch = ~313 updates on bank_2, ~1737 on bank_1
 BATCH_SIZE = 256
@@ -34,7 +34,7 @@ THRESHOLDS = [0.3, 0.4, 0.5, 0.6, 0.7]
 
 # Set to a fraction (e.g. 0.2) for a faster low-fidelity sweep.
 # Hyperparameter rankings are stable on subsets — use 1.0 only for the final run.
-SUBSAMPLE_FRACTION: float = 0.2
+SUBSAMPLE_FRACTION: float = 0.05
 MODEL_CONFIG = {
     "model_type": "tabnet",
     "decision_dim": 16,
@@ -44,7 +44,7 @@ MODEL_CONFIG = {
     "sparsity_weight": 0.0001,
 }
 
-INSTITUTION_ID = "bank_3"
+INSTITUTION_ID = "bank_2"
 DATASET_PATH = Path(f"data/train_test_splits/{INSTITUTION_ID}_train.csv")
 SEED = 42
 OUTPUT_DIR = Path("data/experiments")
