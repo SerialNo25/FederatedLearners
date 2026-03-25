@@ -15,3 +15,6 @@ data/
 
 # Mac os
 .DS_Store
+
+#PyCharm
+.idea/
