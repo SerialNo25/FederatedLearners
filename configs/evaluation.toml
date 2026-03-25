@@ -1,5 +1,5 @@
 experiment_name = "sample_evaluation"
 output_dir = "data/experiments"
 model_path = "data/experiments/local_bank_1_tabnet/model.pt"
-dataset_path = "configs/sample_data/bank_1.csv"
+dataset_path = "data/train_test_splits/bank_1_train.csv"
 classification_threshold = 0.5
