@@ -7,7 +7,7 @@ dataset_path = "data/train_test_splits/bank_3_train.csv"
 
 local_epochs = 5
 learning_rate = 0.02
-fraud_weight = 100
+fraud_weight = 10
 batch_size = 256
-classification_threshold = 0.6
+classification_threshold = 0.5
 seed = 42
