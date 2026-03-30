@@ -1,0 +1,169 @@
+DATA SOURCES & HARMONIZATION SUMMARY
+=====================================
+
+=====================================
+1. DATA SOURCES
+=====================================
+
+Bank A — Sparkov (Fraud Detection)
+  Kaggle slug:    kartik2112/fraud-detection
+  Files:          fraudTrain.csv, fraudTest.csv
+  Original size:  ~1,852,394 rows (train + test combined)
+  Output size:    500,000 rows (subsampled to reduce size imbalance, preserving fraud rate)
+  Fraud rate:     ~0.52%
+  Key features:   Timestamp, amount, merchant category (14 types), demographics
+                  (gender, DOB, job), geographic coordinates (card & merchant),
+                  city population
+
+Bank B — BankSim
+  Kaggle slug:    ealaxi/banksim1
+  Files:          bs140513_032310.csv
+  Original size:  594,643 rows (used in full)
+  Key features:   Time step, amount, merchant category (15 types), customer age
+                  bracket, gender, customer zip code, merchant zip code
+
+Bank C — CC Fraud Transactions
+  Kaggle slug:    anurag629/credit-card-fraud-transaction-data
+  Files:          CreditCardData.csv
+  Original size:  100,000 rows (used in full)
+  Key features:   Date, time, amount, merchant group, transaction country,
+                  shipping/billing address, gender, age, card type,
+                  entry mode (chip/tap/PIN), transaction type (online/POS/ATM)
+
+
+=====================================
+2. HARMONIZED FEATURE SCHEMA (21 features + 1 label)
+=====================================
+
+ #  Feature             Type    Description
+ 1  amount              float   Raw transaction amount
+ 2  log_amount          float   log(1 + amount)
+ 3  amount_zscore       float   Z-score normalized within each bank
+ 4  amount_percentile   float   Percentile rank within each bank [0, 1]
+ 5  hour_sin            float   sin(2pi * hour / 24) -- cyclical hour encoding
+ 6  hour_cos            float   cos(2pi * hour / 24) -- cyclical hour encoding
+ 7  dow_sin             float   sin(2pi * day_of_week / 7) -- cyclical day encoding
+ 8  dow_cos             float   cos(2pi * day_of_week / 7) -- cyclical day encoding
+ 9  is_weekend          int8    1 if Saturday or Sunday
+10  is_night            int8    1 if hour in [22..6)
+11  is_round_amount     int8    1 if amount is a round number
+12  gender_M            int8    1 if male (binary encoding)
+13  age_normalized      float   Age normalized to [0, 1] range (min 18, max 100)
+14  geo_encoded         float   Geographic feature encoded from available geo data
+15  cat_grocery         int8    One-hot: grocery category
+16  cat_shopping        int8    One-hot: shopping category
+17  cat_entertainment   int8    One-hot: entertainment category
+18  cat_gas_transport   int8    One-hot: gas/transport category
+19  cat_food_dining     int8    One-hot: food/dining category
+20  cat_health_personal int8    One-hot: health/personal category
+21  cat_other           int8    One-hot: other category
+ -  is_fraud            int8    Binary fraud label (target)
+
+
+=====================================
+3. HARMONIZATION STEPS PER BANK
+=====================================
+
+--- Bank A (Sparkov) ---
+  amount:           Used directly from raw "amt" column
+  log_amount:       log(1 + amount)
+  amount_zscore:    Z-score computed within Bank A's amount distribution
+  amount_percentile: Percentile rank within Bank A
+  hour/dow:         Extracted from transaction datetime, encoded cyclically (sin/cos)
+  is_weekend:       Derived from day_of_week
+  is_night:         Derived from hour_of_day
+  is_round_amount:  Derived from amount
+  gender_M:         Mapped from "gender" column
+  age_normalized:   Computed from DOB, normalized to [0,1] (min 18, max 100)
+  geo_encoded:      Euclidean distance between card lat/long and merchant lat/long,
+                    clipped at 99th percentile, normalized to [0,1]
+  cat_*:            Merchant "category" mapped via SPARKOV_CAT_MAP to 7 unified categories,
+                    then one-hot encoded
+
+--- Bank B (BankSim) ---
+  amount:           Used directly
+  log_amount:       log(1 + amount)
+  amount_zscore:    Z-score computed within Bank B's amount distribution
+  amount_percentile: Percentile rank within Bank B
+  hour/dow:         BankSim uses a "step" column (integer time steps); mapped to
+                    approximate hour/day, then encoded cyclically
+  is_weekend:       Derived from day_of_week
+  is_night:         Derived from hour_of_day
+  is_round_amount:  Derived from amount
+  gender_M:         Mapped from gender column
+  age_normalized:   Age bracket strings (e.g. "2", "3") mapped to midpoint ages
+                    via AGE_BRACKET_MAP: {0:20, 1:30, 2:40, 3:50, 4:60, 5:70, 6:80},
+                    then normalized to [0,1]
+  geo_encoded:      Absolute difference between customer zip code and merchant zip code,
+                    clipped at max, normalized to [0,1]
+  cat_*:            "category" column (es_food, es_fashion, etc.) mapped via
+                    BANKSIM_CAT_MAP to 7 unified categories, then one-hot encoded
+
+--- Bank C (CC Fraud Transactions) ---
+  amount:           Parsed from string with currency symbol (e.g. "£5"), converted to float
+  log_amount:       log(1 + amount)
+  amount_zscore:    Z-score computed within Bank C's amount distribution
+  amount_percentile: Percentile rank within Bank C
+  hour/dow:         Extracted from "Date" + "Time" columns combined into datetime,
+                    encoded cyclically
+  is_weekend:       Derived from day_of_week
+  is_night:         Derived from hour_of_day
+  is_round_amount:  Derived from amount
+  gender_M:         Mapped from "Gender" column
+  age_normalized:   "Age" column normalized to [0,1] (min 18, max 100);
+                    defaults to 0.5 if column missing
+  geo_encoded:      "Country of Transaction" label-encoded (each unique country gets
+                    a numeric code), then normalized to [0,1]; defaults to 0.5 if missing
+  cat_*:            "Merchant Group" column mapped via CCFRAUD_CAT_MAP to 7 unified
+                    categories, then one-hot encoded
+
+
+=====================================
+4. MERCHANT CATEGORY MAPPING
+=====================================
+
+7 unified categories: grocery, shopping, entertainment, gas_transport,
+                      food_dining, health_personal, other
+
+Sparkov -> Unified:
+  grocery_pos, grocery_net           -> grocery
+  shopping_pos, shopping_net         -> shopping
+  misc_pos, misc_net                 -> shopping
+  entertainment, travel              -> entertainment
+  gas_transport                      -> gas_transport
+  food_dining                        -> food_dining
+  health_fitness, personal_care      -> health_personal
+  home, kids_pets                    -> other
+
+BankSim -> Unified:
+  es_food, es_hyper                  -> grocery
+  es_sportsandtoys, es_fashion, es_tech -> shopping
+  es_hotelservices, es_leisure, es_travel -> entertainment
+  es_transportation                  -> gas_transport
+  es_barsandrestaurants              -> food_dining
+  es_health, es_wellnessandbeauty    -> health_personal
+  es_otherservices, es_contents, es_home -> other
+
+CC Fraud -> Unified:
+  grocery, food, supermarket         -> grocery
+  shopping, retail, electronics, clothing, fashion -> shopping
+  entertainment, travel, hotel, leisure -> entertainment
+  gas, transport, transportation     -> gas_transport
+  restaurant, dining, bar            -> food_dining
+  health, beauty, personal           -> health_personal
+  (anything else)                    -> other
+
+
+=====================================
+5. OUTPUT FILES
+=====================================
+
+Harmonized (federated) datasets -- configs/harmonized_data/:
+  bank_a_sparkov.csv    500,000 rows x 24 cols (subsampled from ~1.85M)
+  bank_b_banksim.csv    594,643 rows x 24 cols
+  bank_c_ccfraud.csv    100,000 rows x 24 cols
+
+Local-model datasets (common features + bank-specific private features) -- data/local_v2/:
+  bank_a_sparkov_local.csv    500,000 rows x 39 cols (+lat/lon, city_pop, state one-hots)
+  bank_b_banksim_local.csv    594,643 rows x 26 cols (+customer/merchant transaction frequency)
+  bank_c_ccfraud_local.csv    100,000 rows x 32 cols (+card type, entry mode, transaction type)

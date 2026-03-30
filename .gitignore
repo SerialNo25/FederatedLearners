@@ -9,6 +9,8 @@ uv.lock
 
 # Data
 data/
+data_backup_v1/
+configs/harmonized_data/*.csv
 
 # Virtual environments
 .venv
