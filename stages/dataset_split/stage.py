@@ -42,11 +42,11 @@ class DatasetSplitStage(Stage):
             n_train_fraud = sum(train_set.labels)
             n_test_fraud = sum(test_set.labels)
             print(
-                f"{inst.institution_id}: {n_total:,} total → "
+                f"{inst.institution_id}: {n_total:,} total -> "
                 f"train {len(train_set.labels):,} ({n_train_fraud} fraud) | "
                 f"test {len(test_set.labels):,} ({n_test_fraud} fraud)"
             )
-            print(f"  → {train_path}")
-            print(f"  → {test_path}")
+            print(f"  -> {train_path}")
+            print(f"  -> {test_path}")
 
         return self.config.output_dir
