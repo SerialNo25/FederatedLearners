@@ -37,6 +37,9 @@ class FederatedRoundReporter:
                 "precision": metric.precision,
                 "recall": metric.recall,
                 "f1": metric.f1,
+                "pr_auc": metric.pr_auc,
+                "roc_auc": metric.roc_auc,
+                "fpr_at_95_recall": metric.fpr_at_95_recall,
             }
             for metric in evaluations
         }

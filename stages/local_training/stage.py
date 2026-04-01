@@ -95,6 +95,8 @@ class LocalTrainingStage(Stage):
                     "val_recall": evaluation.recall,
                     "val_f1": evaluation.f1,
                     "val_pr_auc": evaluation.pr_auc,
+                    "val_roc_auc": evaluation.roc_auc,
+                    "val_fpr_at_95_recall": evaluation.fpr_at_95_recall,
                 }
             },
         )
@@ -102,7 +104,8 @@ class LocalTrainingStage(Stage):
             f"local_training_complete institution={evaluation.institution_id} "
             f"val_loss={evaluation.loss:.6f} val_accuracy={evaluation.accuracy:.6f} "
             f"val_precision={evaluation.precision:.6f} val_recall={evaluation.recall:.6f} "
-            f"val_f1={evaluation.f1:.6f} val_pr_auc={evaluation.pr_auc:.6f}"
+            f"val_f1={evaluation.f1:.6f} val_pr_auc={evaluation.pr_auc:.6f} "
+            f"val_roc_auc={evaluation.roc_auc:.6f} val_fpr_at_95_recall={evaluation.fpr_at_95_recall:.6f}"
         )
 
         (self.experiment_dir / "config.json").write_text(
