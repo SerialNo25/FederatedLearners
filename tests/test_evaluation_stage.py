@@ -99,7 +99,7 @@ class EvaluationStageIntegrationTests(unittest.TestCase):
             self.assertEqual(payload["dataset_path"], dataset_path.as_posix())
             self.assertEqual(
                 set(payload["metrics"]),
-                {"loss", "accuracy", "precision", "recall", "f1", "pr_auc"},
+                {"loss", "accuracy", "precision", "recall", "f1", "pr_auc", "roc_auc", "fpr_at_95_recall"},
             )
 
             for value in payload["metrics"].values():
