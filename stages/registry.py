@@ -9,6 +9,7 @@ from composition.run_ensemble import run_ensemble
 from composition.run_evaluation import run_evaluation
 from composition.run_dataset_split import run_dataset_split
 from composition.run_federated_training import run_federated_training
+from composition.run_harmonized_data import run_harmonized_data
 from composition.run_local_training import run_local_training
 
 class StageRunner(Protocol):
@@ -78,6 +79,7 @@ def build_default_stage_registry() -> StageRegistry:
     registry = StageRegistry()
     registry.register("ensemble", run_ensemble)
     registry.register("evaluation", run_evaluation)
+    registry.register("harmonized_data", run_harmonized_data)
     registry.register("dataset_split", run_dataset_split)
     registry.register("federated_training", run_federated_training)
     registry.register("local_training", run_local_training)
@@ -102,6 +104,7 @@ def build_default_stage_registry() -> StageRegistry:
     registry.register_preset("evaluation", "fexcl1_bank1", "configs/eval_fexcl1_bank1.toml")
     registry.register_preset("evaluation", "fexcl2_bank2", "configs/eval_fexcl2_bank2.toml")
     registry.register_preset("evaluation", "fexcl3_bank3", "configs/eval_fexcl3_bank3.toml")
+    registry.register_preset("harmonized_data", "default", "configs/harmonized_data.toml")
     registry.register_preset("dataset_split", "default", "configs/dataset_split.toml")
     registry.register_preset("federated_training", "default", "configs/federated.toml")
     registry.register_preset("local_training", "default", "configs/local_training.toml")

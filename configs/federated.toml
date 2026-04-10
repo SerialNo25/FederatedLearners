@@ -2,7 +2,7 @@ experiment_name = "federated_global"
 output_dir = "data/experiments"
 model_config = "configs/model.toml"
 
-num_rounds = 10
+num_rounds = 1000
 proximal_mu = 0.01
 
 institution_configs = [

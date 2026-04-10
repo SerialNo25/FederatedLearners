@@ -23,7 +23,22 @@ python main.py federated_training --config configs/federated.toml
 
 See stage documentation:
 
+- `docs/harmonized_data_stage.md`
 - `docs/federated_training_stage.md`
+
+## Build harmonized datasets
+
+```bash
+python main.py harmonized_data --preset default
+```
+
+Helper script:
+
+```bash
+./scripts/run_harmonized_data.sh
+```
+
+Run this before `dataset_split` if you start from the raw bank CSV files in `data/raw/`.
 
 ## Run local-only training
 
