@@ -88,14 +88,21 @@ Files:
 - `config.json`
 - `train.log`
 - `metrics.jsonl`
+- `loss_plot.svg`
+- `pr_auc_plot.svg`
 - `model.pt`
 
 `metrics.jsonl` records per round:
 - `epoch`
 - `train_loss`
 - `val_loss`
+- `pr_auc`
 - `metrics` (local loss, sample counts, model delta magnitudes, and per-institution evaluation)
 - `learning_rate`
+
+`loss_plot.svg` is generated from the per-round `train_loss` and `val_loss` values logged in
+`metrics.jsonl`.
+`pr_auc_plot.svg` plots the sample-weighted aggregate PR-AUC across institutions for each round.
 
 `train.log` now includes one line per institution for each federated round, including:
 - local training loss

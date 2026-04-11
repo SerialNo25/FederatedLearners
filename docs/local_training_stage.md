@@ -47,4 +47,12 @@ The stage writes artifacts under `data/experiments/<experiment_name>/`:
 - `config.json`
 - `train.log`
 - `metrics.jsonl`
+- `loss_plot.svg`
+- `precision_recall_plot.svg`
+- `roc_plot.svg`
 - `model.pt`
+
+`metrics.jsonl` includes one record per local epoch with `train_loss` and `val_loss`, and
+`loss_plot.svg` renders those losses directly from the logged metrics.
+`precision_recall_plot.svg` renders the final model's validation-set precision-recall curve.
+`roc_plot.svg` renders the final model's validation-set ROC curve.
