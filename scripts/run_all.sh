@@ -43,4 +43,7 @@ python main.py ensemble --preset L1_Fincl
 python main.py ensemble --preset L2_Fincl
 python main.py ensemble --preset L3_Fincl
 
+echo "=== Stage 9: Comparison Report ==="
+python scripts/comparison_report.py
+
 echo "=== All stages completed ==="
