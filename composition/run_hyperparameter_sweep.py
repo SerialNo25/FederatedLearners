@@ -26,15 +26,15 @@ from domain.training.trainer import TrainingConfig, train_local_model
 # Search grid
 # ---------------------------------------------------------------------------
 
-FRAUD_WEIGHTS = [10, 25, 50, 100, 150] # [100, 730, 1200]
+FRAUD_WEIGHTS = [2,3,5]
 LEARNING_RATES = [0.005, 0.01, 0.02]
-EPOCHS = [5, 10, 25]  # mini-batch: each epoch = ~313 updates on bank_2, ~1737 on bank_1
+EPOCHS = [10, 25, 50]  # mini-batch: each epoch = ~313 updates on bank_2, ~1737 on bank_1
 BATCH_SIZE = 256
-THRESHOLDS = [0.3, 0.4, 0.5, 0.6, 0.7]
+THRESHOLDS = [0.5]
 
 # Set to a fraction (e.g. 0.2) for a faster low-fidelity sweep.
 # Hyperparameter rankings are stable on subsets — use 1.0 only for the final run.
-SUBSAMPLE_FRACTION: float = 0.05
+SUBSAMPLE_FRACTION: float = 0.4
 MODEL_CONFIG = {
     "model_type": "tabnet",
     "decision_dim": 16,
@@ -44,7 +44,7 @@ MODEL_CONFIG = {
     "sparsity_weight": 0.0001,
 }
 
-INSTITUTION_ID = "bank_2"
+INSTITUTION_ID = "bank_3"
 DATASET_PATH = Path(f"data/train_test_splits/{INSTITUTION_ID}_train.csv")
 SEED = 42
 OUTPUT_DIR = Path("data/experiments")
@@ -67,6 +67,7 @@ class SweepResult:
     val_precision: float
     val_recall: float
     val_f1: float
+    val_pr_auc: float
     train_seconds: float
 
 
@@ -144,6 +145,7 @@ def run_sweep() -> list[SweepResult]:
                 val_precision=metrics.precision,
                 val_recall=metrics.recall,
                 val_f1=metrics.f1,
+                val_pr_auc=metrics.pr_auc,
                 train_seconds=elapsed,
             ))
 
@@ -166,6 +168,7 @@ _COL_WIDTHS = {
     "precision":  10,
     "recall":     7,
     "f1":         7,
+    "pr_auc":     7,
     "secs":       5,
 }
 
@@ -185,6 +188,7 @@ def _row_str(r: SweepResult, highlight: bool = False) -> str:
         f"{r.val_precision:<{_COL_WIDTHS['precision']}.4f}",
         f"{r.val_recall:<{_COL_WIDTHS['recall']}.4f}",
         f"{r.val_f1:<{_COL_WIDTHS['f1']}.4f}",
+        f"{r.val_pr_auc:<{_COL_WIDTHS['pr_auc']}.4f}",
         f"{r.train_seconds:<{_COL_WIDTHS['secs']}.1f}",
     ]
     line = "  ".join(cells)
@@ -192,7 +196,7 @@ def _row_str(r: SweepResult, highlight: bool = False) -> str:
 
 
 def print_table(results: list[SweepResult]) -> None:
-    sorted_results = sorted(results, key=lambda r: r.val_f1, reverse=True)
+    sorted_results = sorted(results, key=lambda r: r.val_pr_auc, reverse=True)
     best = sorted_results[0]
 
     header_cells = [f"{h:<{w}}" for h, w in _COL_WIDTHS.items()]
@@ -200,7 +204,7 @@ def print_table(results: list[SweepResult]) -> None:
     separator = "    " + "-" * (sum(_COL_WIDTHS.values()) + 2 * (len(_COL_WIDTHS) - 1))
 
     print("\n" + "=" * len(separator))
-    print("  RESULTS  (sorted by val_f1 descending, >>> best <<<)")
+    print("  RESULTS  (sorted by val_pr_auc descending, >>> best <<<)")
     print("=" * len(separator))
     print(header)
     print(separator)
@@ -210,7 +214,8 @@ def print_table(results: list[SweepResult]) -> None:
     print(
         f"\n  Best  →  fraud_weight={best.fraud_weight:.0f}  lr={best.learning_rate:.3f}  "
         f"threshold={best.threshold:.2f}  "
-        f"precision={best.val_precision:.4f}  recall={best.val_recall:.4f}  f1={best.val_f1:.4f}"
+        f"precision={best.val_precision:.4f}  recall={best.val_recall:.4f}  "
+        f"f1={best.val_f1:.4f}  pr_auc={best.val_pr_auc:.4f}"
         f"\n  Use in local config  →  local_epochs = {best.full_dataset_epochs}"
     )
 
@@ -222,14 +227,14 @@ def save_csv(results: list[SweepResult], path: Path) -> None:
         writer.writerow([
             "fraud_weight", "learning_rate", "sweep_epochs", "full_dataset_epochs", "threshold",
             "train_loss", "val_loss", "val_accuracy",
-            "val_precision", "val_recall", "val_f1", "train_seconds",
+            "val_precision", "val_recall", "val_f1", "val_pr_auc", "train_seconds",
         ])
-        for r in sorted(results, key=lambda r: r.val_f1, reverse=True):
+        for r in sorted(results, key=lambda r: r.val_pr_auc, reverse=True):
             writer.writerow([
                 r.fraud_weight, r.learning_rate, r.epochs, r.full_dataset_epochs, r.threshold,
                 round(r.train_loss, 6), round(r.val_loss, 6), round(r.val_accuracy, 6),
                 round(r.val_precision, 6), round(r.val_recall, 6), round(r.val_f1, 6),
-                round(r.train_seconds, 2),
+                round(r.val_pr_auc, 6), round(r.train_seconds, 2),
             ])
     print(f"\n  CSV saved → {path}")
 
