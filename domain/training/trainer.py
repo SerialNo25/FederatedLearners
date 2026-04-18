@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 import math
 
@@ -40,6 +41,7 @@ def train_local_model(
     labels: list[int],
     config: TrainingConfig,
     global_parameters: dict[str, list[float]] | None = None,
+    on_epoch_end: Callable[[int, float], None] | None = None,
 ) -> float:
     return _train_torch_model(
         model=model,
@@ -47,6 +49,7 @@ def train_local_model(
         labels=labels,
         config=config,
         global_parameters=global_parameters,
+        on_epoch_end=on_epoch_end,
     )
 
 
@@ -56,6 +59,7 @@ def _train_torch_model(
     labels: list[int],
     config: TrainingConfig,
     global_parameters: dict[str, list[float]] | None,
+    on_epoch_end: Callable[[int, float], None] | None,
 ) -> float:
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
@@ -77,7 +81,8 @@ def _train_torch_model(
     n = inputs.shape[0]
 
     final_loss = 0.0
-    for _ in tqdm(range(config.local_epochs), desc="Local epochs", leave=False):
+    for epoch_index in tqdm(range(config.local_epochs), desc="Local epochs", leave=False):
+        model.train()
         perm = torch.randperm(n, device=model.device)
         epoch_loss = 0.0
         n_batches = 0
@@ -104,5 +109,7 @@ def _train_torch_model(
             n_batches += 1
 
         final_loss = epoch_loss / max(n_batches, 1)
+        if on_epoch_end is not None:
+            on_epoch_end(epoch_index + 1, final_loss)
 
     return final_loss

@@ -32,6 +32,11 @@ class LocalTrainingStage(Stage):
         self.model_factory = model_factory
 
     def execute(self) -> Path:
+        (self.experiment_dir / "config.json").write_text(
+            json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
+        )
+        self._write_run_state("running")
+
         dataset = load_institution_dataset(
             institution_id=self.config.institution_id,
             csv_path=self.config.dataset_path,
@@ -59,6 +64,41 @@ class LocalTrainingStage(Stage):
         if model_device is not None:
             self.experiment_logger.info(f"tabnet_device_selection selected={model_device}")
 
+        def record_epoch_metrics(epoch: int, train_loss: float) -> None:
+            evaluation = evaluate_institution(
+                model,
+                val_dataset,
+                pos_weight=self.config.fraud_weight,
+                threshold=self.config.classification_threshold,
+            )
+            self.experiment_logger.write_metrics(
+                step="local_training",
+                values={
+                    "epoch": epoch,
+                    "total_epochs": self.config.local_epochs,
+                    "train_loss": train_loss,
+                    "val_loss": evaluation.loss,
+                    "learning_rate": self.config.learning_rate,
+                    "classification_threshold": self.config.classification_threshold,
+                    "metrics": {
+                        "institution_id": evaluation.institution_id,
+                        "val_loss": evaluation.loss,
+                        "val_accuracy": evaluation.accuracy,
+                        "val_precision": evaluation.precision,
+                        "val_recall": evaluation.recall,
+                        "val_f1": evaluation.f1,
+                        "val_pr_auc": evaluation.pr_auc,
+                        "val_roc_auc": evaluation.roc_auc,
+                        "val_fpr_at_95_recall": evaluation.fpr_at_95_recall,
+                    },
+                },
+            )
+            self.experiment_logger.info(
+                f"local_training_epoch epoch={epoch}/{self.config.local_epochs} "
+                f"train_loss={train_loss:.6f} val_loss={evaluation.loss:.6f} "
+                f"val_pr_auc={evaluation.pr_auc:.6f} val_f1={evaluation.f1:.6f}"
+            )
+
         final_train_loss = train_local_model(
             model=model,
             features=train_dataset.features,
@@ -71,6 +111,7 @@ class LocalTrainingStage(Stage):
                 batch_size=self.config.batch_size,
                 seed=self.config.seed,
             ),
+            on_epoch_end=record_epoch_metrics,
         )
         evaluation = evaluate_institution(
             model,
@@ -78,43 +119,32 @@ class LocalTrainingStage(Stage):
             pos_weight=self.config.fraud_weight,
             threshold=self.config.classification_threshold,
         )
-
-        self.experiment_logger.write_metrics(
-            step="local_training",
-            values={
-                "epoch": self.config.local_epochs,
-                "train_loss": final_train_loss,
-                "val_loss": evaluation.loss,
-                "learning_rate": self.config.learning_rate,
-                "classification_threshold": self.config.classification_threshold,
-                "metrics": {
-                    "institution_id": evaluation.institution_id,
-                    "val_loss": evaluation.loss,
-                    "val_accuracy": evaluation.accuracy,
-                    "val_precision": evaluation.precision,
-                    "val_recall": evaluation.recall,
-                    "val_f1": evaluation.f1,
-                    "val_pr_auc": evaluation.pr_auc,
-                    "val_roc_auc": evaluation.roc_auc,
-                    "val_fpr_at_95_recall": evaluation.fpr_at_95_recall,
-                }
-            },
-        )
         self.experiment_logger.info(
             f"local_training_complete institution={evaluation.institution_id} "
-            f"val_loss={evaluation.loss:.6f} val_accuracy={evaluation.accuracy:.6f} "
+            f"train_loss={final_train_loss:.6f} val_loss={evaluation.loss:.6f} val_accuracy={evaluation.accuracy:.6f} "
             f"val_precision={evaluation.precision:.6f} val_recall={evaluation.recall:.6f} "
             f"val_f1={evaluation.f1:.6f} val_pr_auc={evaluation.pr_auc:.6f} "
             f"val_roc_auc={evaluation.roc_auc:.6f} val_fpr_at_95_recall={evaluation.fpr_at_95_recall:.6f}"
         )
 
-        (self.experiment_dir / "config.json").write_text(
-            json.dumps(self.config.to_dict(), indent=2), encoding="utf-8"
-        )
         ModelArtifactWriter.write_model_checkpoint(
             checkpoint_path=self.experiment_dir / "model.pt",
             model_type=self.config.model.model_type,
             model=model,
             model_config=self.config.model.model_dump(mode="python"),
         )
+        self._write_run_state("completed")
         return self.experiment_dir
+
+    def _write_run_state(self, status: str) -> None:
+        (self.experiment_dir / "run_state.json").write_text(
+            json.dumps(
+                {
+                    "stage": "local_training",
+                    "status": status,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
