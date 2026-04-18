@@ -32,13 +32,9 @@ See stage documentation:
 python main.py --config configs/pipeline/harmonized_data.toml
 ```
 
-Helper script:
-
-```bash
-./scripts/run_harmonized_data.sh
-```
-
-Run this before `dataset_split` if you start from the raw bank CSV files in `data/raw/`.
+Run this if you start from the raw bank CSV files in `data/raw/`. The stage now splits raw rows first,
+fits preprocessing statistics on each train subset only, and writes the harmonized train/test CSVs used
+by the training and evaluation configs.
 
 ## Run local-only training
 

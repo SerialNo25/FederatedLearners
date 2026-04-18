@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import csv
+import json
 import math
 import random
+from bisect import bisect_right
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
@@ -116,13 +118,40 @@ class HarmonizedDatasetSummary:
 
 
 @dataclass(frozen=True)
+class HarmonizedSubsetSummary:
+    name: Literal["train", "test"]
+    output_path: Path
+    row_count: int
+    fraud_count: int
+
+
+@dataclass(frozen=True)
+class HarmonizedSplitSummary:
+    institution_id: str
+    bank_kind: BankKind
+    train: HarmonizedSubsetSummary
+    test: HarmonizedSubsetSummary
+    preprocessing_artifact_path: Path
+
+
+@dataclass(frozen=True)
 class _PrecomputedStats:
     amount_mean: float
     amount_std: float
     amount_percentiles: dict[float, float]
+    amount_sorted_values: tuple[float, ...]
     geo_scale: float
     country_mapping: dict[str, int]
     selected_row_indices: set[int] | None
+
+
+@dataclass(frozen=True)
+class _RawRowStats:
+    row_index: int
+    label: int
+    amount: float
+    geo: float
+    country: str
 
 
 class RawDataHarmonizationService:
@@ -141,6 +170,66 @@ class RawDataHarmonizationService:
             output_path=output_path,
             row_count=row_count,
             fraud_count=fraud_count,
+        )
+
+    def harmonize_train_test_split(
+        self,
+        source: RawDatasetSource,
+        output_dir: Path,
+        test_fraction: float,
+    ) -> HarmonizedSplitSummary:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        rows = self._collect_raw_row_stats(source)
+        selected_indices = self._select_source_indices(source, rows)
+        train_indices, test_indices = self._split_indices_by_label(
+            rows=rows,
+            selected_indices=selected_indices,
+            test_fraction=test_fraction,
+        )
+        train_stats = self._build_stats_from_rows(source, rows, train_indices)
+
+        train_path = output_dir / f"{source.institution_id}_train.csv"
+        test_path = output_dir / f"{source.institution_id}_test.csv"
+        train_counts = self._write_harmonized_subset(
+            source,
+            train_stats,
+            train_indices,
+            train_path,
+        )
+        test_counts = self._write_harmonized_subset(
+            source,
+            train_stats,
+            test_indices,
+            test_path,
+        )
+
+        artifact_path = output_dir / f"{source.institution_id}_preprocessing.json"
+        self._write_preprocessing_artifact(
+            artifact_path=artifact_path,
+            source=source,
+            train_indices=train_indices,
+            test_indices=test_indices,
+            stats=train_stats,
+            test_fraction=test_fraction,
+        )
+
+        return HarmonizedSplitSummary(
+            institution_id=source.institution_id,
+            bank_kind=source.bank_kind,
+            train=HarmonizedSubsetSummary(
+                name="train",
+                output_path=train_path,
+                row_count=train_counts[0],
+                fraud_count=train_counts[1],
+            ),
+            test=HarmonizedSubsetSummary(
+                name="test",
+                output_path=test_path,
+                row_count=test_counts[0],
+                fraud_count=test_counts[1],
+            ),
+            preprocessing_artifact_path=artifact_path,
         )
 
     def _collect_stats(self, source: RawDatasetSource) -> _PrecomputedStats:
@@ -185,9 +274,96 @@ class RawDataHarmonizationService:
             amount_mean=amount_mean,
             amount_std=amount_std,
             amount_percentiles=self._build_percentile_lookup(amounts),
+            amount_sorted_values=tuple(sorted(amounts)),
             geo_scale=geo_scale,
             country_mapping=country_mapping,
             selected_row_indices=selected_row_indices,
+        )
+
+    def _collect_raw_row_stats(self, source: RawDatasetSource) -> list[_RawRowStats]:
+        rows: list[_RawRowStats] = []
+        with source.raw_path.open("r", newline="", encoding="utf-8-sig") as handle:
+            reader = csv.DictReader(handle)
+            for row_index, row in enumerate(reader):
+                country = ""
+                if source.bank_kind == "ccfraud":
+                    country = self._clean_string(row.get("Country of Transaction", ""))
+                rows.append(
+                    _RawRowStats(
+                        row_index=row_index,
+                        label=self._extract_label(source.bank_kind, row),
+                        amount=self._extract_amount(source.bank_kind, row),
+                        geo=self._extract_geo_value(source.bank_kind, row),
+                        country=country,
+                    )
+                )
+        return rows
+
+    def _select_source_indices(
+        self,
+        source: RawDatasetSource,
+        rows: list[_RawRowStats],
+    ) -> set[int]:
+        if source.bank_kind != "sparkov":
+            return {row.row_index for row in rows}
+
+        fraud_indices = [row.row_index for row in rows if row.label == 1]
+        legit_indices = [row.row_index for row in rows if row.label == 0]
+        return self._build_sparkov_sample_indices(fraud_indices, legit_indices)
+
+    def _split_indices_by_label(
+        self,
+        rows: list[_RawRowStats],
+        selected_indices: set[int],
+        test_fraction: float,
+    ) -> tuple[set[int], set[int]]:
+        indices_by_class: dict[int, list[int]] = {}
+        for row in rows:
+            if row.row_index in selected_indices:
+                indices_by_class.setdefault(row.label, []).append(row.row_index)
+
+        rng = random.Random(self._seed)
+        train_indices: set[int] = set()
+        test_indices: set[int] = set()
+        for indices in indices_by_class.values():
+            shuffled = indices[:]
+            rng.shuffle(shuffled)
+            n_test = round(len(shuffled) * test_fraction)
+            if len(shuffled) > 1:
+                n_test = min(max(1, n_test), len(shuffled) - 1)
+            else:
+                n_test = 0
+            test_indices.update(shuffled[:n_test])
+            train_indices.update(shuffled[n_test:])
+
+        return train_indices, test_indices
+
+    def _build_stats_from_rows(
+        self,
+        source: RawDatasetSource,
+        rows: list[_RawRowStats],
+        selected_indices: set[int],
+    ) -> _PrecomputedStats:
+        selected_rows = [row for row in rows if row.row_index in selected_indices]
+        amounts = [row.amount for row in selected_rows]
+        geos = [row.geo for row in selected_rows]
+        country_values = {row.country for row in selected_rows if row.country}
+
+        amount_mean = float(np.mean(amounts)) if amounts else 0.0
+        amount_std = float(np.std(amounts, ddof=1)) if len(amounts) > 1 else 0.0
+        country_mapping = {
+            value: index
+            for index, value in enumerate(sorted(country_values))
+        } if source.bank_kind == "ccfraud" else {}
+
+        return _PrecomputedStats(
+            amount_mean=amount_mean,
+            amount_std=amount_std,
+            amount_percentiles=self._build_percentile_lookup(amounts),
+            amount_sorted_values=tuple(sorted(amounts)),
+            geo_scale=self._quantile_99(geos),
+            country_mapping=country_mapping,
+            selected_row_indices=None,
         )
 
     def _write_harmonized_dataset(
@@ -219,6 +395,82 @@ class RawDataHarmonizationService:
 
         return row_count, fraud_count
 
+    def _write_harmonized_subset(
+        self,
+        source: RawDatasetSource,
+        stats: _PrecomputedStats,
+        selected_indices: set[int],
+        output_path: Path,
+    ) -> tuple[int, int]:
+        row_count = 0
+        fraud_count = 0
+
+        with source.raw_path.open("r", newline="", encoding="utf-8-sig") as input_handle:
+            reader = csv.DictReader(input_handle)
+            with output_path.open("w", newline="", encoding="utf-8") as output_handle:
+                writer = csv.DictWriter(output_handle, fieldnames=ALL_COLUMNS)
+                writer.writeheader()
+
+                for row_index, row in enumerate(reader):
+                    if row_index not in selected_indices:
+                        continue
+
+                    harmonized = self._harmonize_row(source.bank_kind, row, stats)
+                    writer.writerow(harmonized)
+                    row_count += 1
+                    fraud_count += int(harmonized[TARGET_COLUMN])
+
+        return row_count, fraud_count
+
+    def _write_preprocessing_artifact(
+        self,
+        artifact_path: Path,
+        source: RawDatasetSource,
+        train_indices: set[int],
+        test_indices: set[int],
+        stats: _PrecomputedStats,
+        test_fraction: float,
+    ) -> None:
+        payload = {
+            "institution_id": source.institution_id,
+            "bank_kind": source.bank_kind,
+            "raw_path": str(source.raw_path),
+            "seed": self._seed,
+            "test_fraction": test_fraction,
+            "split_policy": "stratified_by_raw_label_before_harmonization",
+            "fit_subset": "train",
+            "train_row_count": len(train_indices),
+            "test_row_count": len(test_indices),
+            "feature_columns": ALL_COLUMNS[:-1],
+            "target_column": TARGET_COLUMN,
+            "transforms": {
+                "amount": "raw_amount",
+                "log_amount": "log1p(max(raw_amount, 0.0))",
+                "amount_zscore": "(raw_amount - train_amount_mean) / train_amount_std",
+                "amount_percentile": "empirical_percentile_lookup_fit_on_train_amounts",
+                "hour_sin": "sin(2*pi*hour/24)",
+                "hour_cos": "cos(2*pi*hour/24)",
+                "dow_sin": "sin(2*pi*day_of_week/7)",
+                "dow_cos": "cos(2*pi*day_of_week/7)",
+                "age_normalized": "clip((age_years - 18) / (100 - 18), 0, 1)",
+                "geo_encoded": "raw_geo / train_geo_99th_percentile clipped to [0, 1]",
+            },
+            "statistics": {
+                "amount_mean": stats.amount_mean,
+                "amount_std": stats.amount_std,
+                "amount_count": len(stats.amount_sorted_values),
+                "amount_min": (
+                    min(stats.amount_sorted_values) if stats.amount_sorted_values else None
+                ),
+                "amount_max": (
+                    max(stats.amount_sorted_values) if stats.amount_sorted_values else None
+                ),
+                "geo_scale_99th_percentile": stats.geo_scale,
+                "country_mapping": stats.country_mapping,
+            },
+        }
+        artifact_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
     def _harmonize_row(
         self,
         bank_kind: BankKind,
@@ -237,7 +489,7 @@ class RawDataHarmonizationService:
             "amount": amount,
             "log_amount": math.log1p(max(amount, 0.0)),
             "amount_zscore": self._amount_zscore(amount, stats),
-            "amount_percentile": stats.amount_percentiles.get(amount, 0.5),
+            "amount_percentile": self._amount_percentile(amount, stats),
             "hour_sin": math.sin(2.0 * math.pi * hour_of_day / 24.0),
             "hour_cos": math.cos(2.0 * math.pi * hour_of_day / 24.0),
             "dow_sin": math.sin(2.0 * math.pi * day_of_week / 7.0),
@@ -265,6 +517,15 @@ class RawDataHarmonizationService:
         if stats.amount_std <= 1e-12:
             return 0.0
         return (amount - stats.amount_mean) / stats.amount_std
+
+    def _amount_percentile(self, amount: float, stats: _PrecomputedStats) -> float:
+        if amount in stats.amount_percentiles:
+            return stats.amount_percentiles[amount]
+        values = stats.amount_sorted_values
+        if not values:
+            return 0.5
+        rank = bisect_right(values, amount)
+        return self._clip01(rank / len(values))
 
     def _normalize_geo(
         self,

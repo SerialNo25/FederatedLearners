@@ -22,6 +22,7 @@ class HarmonizedDataConfig(BaseModel):
     output_dir: Path = Path("data/harmonized")
     seed: int = 42
     sparkov_target_size: int = 500_000
+    test_fraction: float = 0.2
     datasets: list[RawDatasetConfig]
 
     @field_validator("sparkov_target_size")
@@ -29,6 +30,13 @@ class HarmonizedDataConfig(BaseModel):
     def _validate_target_size(cls, value: int) -> int:
         if value <= 0:
             raise ValueError("sparkov_target_size must be positive")
+        return value
+
+    @field_validator("test_fraction")
+    @classmethod
+    def _validate_test_fraction(cls, value: float) -> float:
+        if not 0.0 < value < 1.0:
+            raise ValueError("test_fraction must be between 0 and 1 (exclusive)")
         return value
 
     @field_validator("datasets")

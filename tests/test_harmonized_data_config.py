@@ -8,6 +8,7 @@ def _base_dict(**overrides) -> dict:
         "output_dir": "data/harmonized",
         "seed": 42,
         "sparkov_target_size": 500000,
+        "test_fraction": 0.2,
         "datasets": [
             {
                 "institution_id": "bank_1",
@@ -31,6 +32,7 @@ class HarmonizedDataConfigTests(unittest.TestCase):
         config = HarmonizedDataConfig.from_dict(_base_dict())
         self.assertEqual(config.output_dir.as_posix(), "data/harmonized")
         self.assertEqual(config.sparkov_target_size, 500000)
+        self.assertEqual(config.test_fraction, 0.2)
 
     def test_requires_unique_institution_ids(self):
         with self.assertRaises(ValueError):
@@ -56,6 +58,10 @@ class HarmonizedDataConfigTests(unittest.TestCase):
     def test_requires_positive_sparkov_target_size(self):
         with self.assertRaises(ValueError):
             HarmonizedDataConfig.from_dict(_base_dict(sparkov_target_size=0))
+
+    def test_requires_valid_test_fraction(self):
+        with self.assertRaises(ValueError):
+            HarmonizedDataConfig.from_dict(_base_dict(test_fraction=1.0))
 
 
 if __name__ == "__main__":

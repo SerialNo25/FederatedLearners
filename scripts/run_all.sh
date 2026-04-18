@@ -4,8 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.." || exit 1
 
-echo "=== Stage 1: Dataset Split ==="
-python main.py --config configs/pipeline/dataset_split.toml
+echo "=== Stage 1: Harmonized Train/Test Data ==="
+python main.py --config configs/pipeline/harmonized_data.toml
 
 echo "=== Stage 2: Local Training ==="
 python main.py --config configs/local_training/bank_1.toml

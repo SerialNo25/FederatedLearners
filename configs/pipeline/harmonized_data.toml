@@ -1,7 +1,8 @@
 stage = "harmonized_data"
-output_dir = "data/harmonized"
+output_dir = "data/train_test_splits"
 seed = 42
 sparkov_target_size = 500000
+test_fraction = 0.2
 
 [[datasets]]
 institution_id = "bank_1"
