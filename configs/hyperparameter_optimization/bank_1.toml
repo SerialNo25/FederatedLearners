@@ -18,7 +18,7 @@ seed = 42
 local_epochs = 5
 learning_rate = 0.02
 fraud_weight = 50
-batch_size = 256
+batch_size = 4096
 classification_threshold = 0.5
 
 [search_space.training.learning_rate]
@@ -37,7 +37,7 @@ log = true
 #step = 1
 
 [search_space.training.batch_size]
-choices = [128, 256, 512, 1028]
+choices = [1024, 2048, 4096, 8192]
 
 #[search_space.training.classification_threshold]
 #low = 0.3

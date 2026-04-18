@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 
 import torch
 
@@ -65,12 +66,15 @@ class LocalTrainingStage(Stage):
             self.experiment_logger.info(f"tabnet_device_selection selected={model_device}")
 
         def record_epoch_metrics(epoch: int, train_loss: float) -> None:
+            evaluation_started = perf_counter()
             evaluation = evaluate_institution(
                 model,
                 val_dataset,
                 pos_weight=self.config.fraud_weight,
                 threshold=self.config.classification_threshold,
             )
+            evaluation_seconds = perf_counter() - evaluation_started
+            metrics_write_started = perf_counter()
             self.experiment_logger.write_metrics(
                 step="local_training",
                 values={
@@ -93,10 +97,37 @@ class LocalTrainingStage(Stage):
                     },
                 },
             )
+            metrics_write_seconds = perf_counter() - metrics_write_started
             self.experiment_logger.info(
                 f"local_training_epoch epoch={epoch}/{self.config.local_epochs} "
                 f"train_loss={train_loss:.6f} val_loss={evaluation.loss:.6f} "
                 f"val_pr_auc={evaluation.pr_auc:.6f} val_f1={evaluation.f1:.6f}"
+            )
+            self.experiment_logger.write_profile(
+                step="local_training_evaluation",
+                values={
+                    "epoch": epoch,
+                    "evaluation_seconds": evaluation_seconds,
+                    "metrics_write_seconds": metrics_write_seconds,
+                    "val_samples": len(val_dataset.labels),
+                },
+            )
+
+        def record_epoch_profile(profile) -> None:
+            values = profile.to_dict()
+            values["device"] = str(model_device or "unknown")
+            self.experiment_logger.write_profile(
+                step="local_training_epoch",
+                values=values,
+            )
+            self.experiment_logger.info(
+                "local_training_profile "
+                f"epoch={profile.epoch}/{self.config.local_epochs} "
+                f"batch_seconds={profile.batch_seconds:.6f} "
+                f"forward_backward_seconds={profile.forward_backward_seconds:.6f} "
+                f"optimizer_step_seconds={profile.optimizer_step_seconds:.6f} "
+                f"loss_read_seconds={profile.loss_read_seconds:.6f} "
+                f"callback_seconds={profile.callback_seconds:.6f}"
             )
 
         final_train_loss = train_local_model(
@@ -112,6 +143,7 @@ class LocalTrainingStage(Stage):
                 seed=self.config.seed,
             ),
             on_epoch_end=record_epoch_metrics,
+            on_epoch_profile=record_epoch_profile,
         )
         evaluation = evaluate_institution(
             model,

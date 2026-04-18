@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 from tqdm import tqdm
 
 from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
@@ -107,7 +108,11 @@ class FederatedTrainingStage(Stage):
     ) -> list[FederatedRoundReport]:
         round_reports: list[FederatedRoundReport] = []
         for round_index in tqdm(range(1, self.config.num_rounds + 1), "federated rounds"):
+            round_started = perf_counter()
+            fit_started = perf_counter()
             updates = orchestrator.run_round()
+            fit_seconds = perf_counter() - fit_started
+            evaluation_started = perf_counter()
             evaluations = [
                 evaluate_institution(
                     orchestrator.global_model,
@@ -117,6 +122,8 @@ class FederatedTrainingStage(Stage):
                 )
                 for inst_config, dataset in zip(self.config.institutions, datasets)
             ]
+            evaluation_seconds = perf_counter() - evaluation_started
+            reporting_started = perf_counter()
             round_report = self.round_reporter.build_report(
                 round_index=round_index,
                 updates=updates,
@@ -130,6 +137,33 @@ class FederatedTrainingStage(Stage):
                 self.experiment_logger.info(line)
             self.experiment_logger.info(round_report.summary_line)
             round_reports.append(round_report)
+            reporting_seconds = perf_counter() - reporting_started
+            self.experiment_logger.write_profile(
+                step=f"round_{round_index}",
+                values={
+                    "epoch": round_index,
+                    "round_seconds": perf_counter() - round_started,
+                    "fit_seconds": fit_seconds,
+                    "evaluation_seconds": evaluation_seconds,
+                    "reporting_seconds": reporting_seconds,
+                    "client_fit_seconds": {
+                        update.institution_id: update.elapsed_seconds for update in updates
+                    },
+                    "client_training_profile": {
+                        update.institution_id: update.training_profile for update in updates
+                    },
+                    "evaluation_samples": {
+                        dataset.institution_id: len(dataset.labels) for dataset in datasets
+                    },
+                },
+            )
+            self.experiment_logger.info(
+                "federated_training_profile "
+                f"round={round_index}/{self.config.num_rounds} "
+                f"fit_seconds={fit_seconds:.6f} "
+                f"evaluation_seconds={evaluation_seconds:.6f} "
+                f"reporting_seconds={reporting_seconds:.6f}"
+            )
         return round_reports
 
     def _load_datasets(self) -> list[InstitutionDataset]:

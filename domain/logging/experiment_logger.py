@@ -44,6 +44,7 @@ class StageExperimentLogger:
 
         self.log_path = self.experiment_dir / "train.log"
         self.metrics_path = self.experiment_dir / "metrics.jsonl"
+        self.profile_path = self.experiment_dir / "profile.jsonl"
 
         self._setup_logger()
 
@@ -85,3 +86,13 @@ class StageExperimentLogger:
         }
         with self.metrics_path.open("a", encoding="utf-8") as metrics_file:
             metrics_file.write(f"{json.dumps(record, ensure_ascii=False)}\n")
+
+    def write_profile(self, step: str, values: dict[str, object]) -> None:
+        record = {
+            "step": step,
+            "stage": self.stage_name,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            **values,
+        }
+        with self.profile_path.open("a", encoding="utf-8") as profile_file:
+            profile_file.write(f"{json.dumps(record, ensure_ascii=False)}\n")

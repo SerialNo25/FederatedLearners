@@ -21,7 +21,7 @@ class LocalTrainingConfig(BaseModel):
     local_epochs: int
     learning_rate: float
     fraud_weight: float = 100.0
-    batch_size: int = 256
+    batch_size: int = 4096
     classification_threshold: float = 0.5
     seed: int = 42
     model: ModelConfig
