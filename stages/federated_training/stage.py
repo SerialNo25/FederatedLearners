@@ -44,6 +44,7 @@ class FederatedTrainingStage(Stage):
         self.round_reporter = round_reporter or FederatedRoundReporter()
 
     def execute(self) -> Path:
+        self._write_run_state("running")
         datasets = self._load_datasets()
         self._assert_dataset_invariants(datasets)
 
@@ -53,6 +54,7 @@ class FederatedTrainingStage(Stage):
         round_reports = self._run_training_rounds(orchestrator, datasets)
         self._persist_artifacts(self.experiment_dir, orchestrator.global_model)
         self._write_training_plots(round_reports)
+        self._write_run_state("completed")
         return self.experiment_dir
 
     def _build_orchestrator(
@@ -179,4 +181,20 @@ class FederatedTrainingStage(Stage):
             output_path=self.experiment_dir / "pr_auc_plot.svg",
             rounds=rounds,
             pr_auc_values=pr_auc_values,
+        )
+
+    def _write_run_state(self, status: str) -> None:
+        (self.experiment_dir / "run_state.json").write_text(
+            json.dumps(
+                {
+                    "stage": "federated_training",
+                    "status": status,
+                    "experiment_name": self.config.experiment_name,
+                    "run_id": self.experiment_dir.name,
+                    "run_dir": str(self.experiment_dir),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
         )

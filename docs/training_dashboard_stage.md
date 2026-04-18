@@ -5,7 +5,16 @@
 The `training_dashboard` stage starts a browser-based monitor for local training runs.
 It reads experiment artifacts from `data/experiments/` and does not own model training.
 
-The first version focuses on `local_training` runs and follows the existing experiment structure:
+The dashboard focuses on `local_training` runs and reads each numbered run folder:
+
+```text
+data/experiments/<experiment_name>/run_###/
+```
+
+It also continues to read legacy flat experiment folders. Each dashboard run name uses the
+`<experiment_name>/<run_id>` format, for example `local_bank_1_tabnet/run_001`.
+
+Required artifacts:
 
 - `config.json`
 - `train.log`

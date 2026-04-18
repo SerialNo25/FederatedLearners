@@ -27,10 +27,10 @@ class TrainingRunMonitor:
         return sorted(local_runs, key=lambda run: run["updated_at"] or "", reverse=True)
 
     def get_run(self, run_name: str) -> dict[str, Any]:
-        if "/" in run_name or "\\" in run_name or run_name in {"", ".", ".."}:
+        run_dir = self._resolve_run_dir(run_name)
+        if run_dir is None:
             raise KeyError(run_name)
 
-        run_dir = self.config.experiments_dir / run_name
         summary = self._summarize_run(run_dir)
         if summary is None or summary["stage"] != "local_training":
             raise KeyError(run_name)
@@ -44,11 +44,35 @@ class TrainingRunMonitor:
     def _candidate_run_dirs(self) -> list[Path]:
         if not self.config.experiments_dir.exists():
             return []
-        return [
-            path
-            for path in self.config.experiments_dir.iterdir()
-            if path.is_dir() and ((path / "metrics.jsonl").exists() or (path / "config.json").exists())
-        ]
+        candidates: list[Path] = []
+        for experiment_dir in self.config.experiments_dir.iterdir():
+            if not experiment_dir.is_dir():
+                continue
+            if self._has_run_artifacts(experiment_dir):
+                candidates.append(experiment_dir)
+            candidates.extend(
+                path
+                for path in experiment_dir.iterdir()
+                if path.is_dir() and self._has_run_artifacts(path)
+            )
+        return candidates
+
+    def _resolve_run_dir(self, run_name: str) -> Path | None:
+        if "\\" in run_name or run_name in {"", ".", ".."}:
+            return None
+        parts = run_name.split("/")
+        if any(part in {"", ".", ".."} for part in parts) or len(parts) > 2:
+            return None
+        run_dir = self.config.experiments_dir.joinpath(*parts)
+        try:
+            run_dir.relative_to(self.config.experiments_dir)
+        except ValueError:
+            return None
+        return run_dir
+
+    @staticmethod
+    def _has_run_artifacts(path: Path) -> bool:
+        return (path / "metrics.jsonl").exists() or (path / "config.json").exists()
 
     def _summarize_run(self, run_dir: Path) -> dict[str, Any] | None:
         if not run_dir.exists() or not run_dir.is_dir():
@@ -60,18 +84,20 @@ class TrainingRunMonitor:
         latest = metrics[-1] if metrics else {}
         stage = str(config.get("stage") or run_state.get("stage") or latest.get("stage") or "unknown")
         updated_at = self._latest_artifact_timestamp(run_dir)
+        display_name = self._display_name(run_dir)
 
         total_epochs = latest.get("total_epochs") or config.get("local_epochs")
         epoch = latest.get("epoch")
         institution_id = config.get("institution_id") or _nested_get(latest, "metrics", "institution_id")
 
         return {
-            "name": run_dir.name,
+            "name": display_name,
             "path": str(run_dir),
             "stage": stage,
             "status": self._status(run_dir, updated_at, epoch, total_epochs, run_state.get("status")),
             "institution_id": institution_id,
-            "experiment_name": config.get("experiment_name") or run_dir.name,
+            "experiment_name": config.get("experiment_name") or run_state.get("experiment_name") or run_dir.parent.name,
+            "run_id": run_state.get("run_id") or (run_dir.name if run_dir.parent == self.config.experiments_dir else run_dir.name),
             "epoch": epoch,
             "total_epochs": total_epochs,
             "updated_at": updated_at,
@@ -82,8 +108,15 @@ class TrainingRunMonitor:
                 "log": (run_dir / "train.log").exists(),
                 "model": (run_dir / "model.pt").exists(),
                 "run_state": (run_dir / "run_state.json").exists(),
+                "loss_plot": (run_dir / "loss_plot.svg").exists(),
+                "pr_auc_plot": (run_dir / "pr_auc_plot.svg").exists(),
+                "evaluation": (run_dir / "evaluation.json").exists(),
             },
         }
+
+    def _display_name(self, run_dir: Path) -> str:
+        relative_path = run_dir.relative_to(self.config.experiments_dir)
+        return relative_path.as_posix()
 
     def _status(
         self,
@@ -156,7 +189,16 @@ class TrainingRunMonitor:
     def _latest_artifact_mtime(run_dir: Path) -> float | None:
         mtimes = [
             path.stat().st_mtime
-            for name in ("metrics.jsonl", "train.log", "config.json", "model.pt", "run_state.json")
+            for name in (
+                "metrics.jsonl",
+                "train.log",
+                "config.json",
+                "model.pt",
+                "run_state.json",
+                "loss_plot.svg",
+                "pr_auc_plot.svg",
+                "evaluation.json",
+            )
             if (path := run_dir / name).exists()
         ]
         return max(mtimes) if mtimes else None

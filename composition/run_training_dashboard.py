@@ -158,6 +158,7 @@ _INDEX_HTML = """<!doctype html>
     }
     .run-button:hover, .run-button.active { background: #eef8f6; }
     .run-title { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; }
+    .run-title span:first-child { overflow-wrap: anywhere; }
     .status {
       border-radius: 8px;
       padding: 2px 8px;
@@ -300,6 +301,7 @@ _INDEX_HTML = """<!doctype html>
           <div class="run-title"><span>${escapeHtml(run.name)}</span><span class="status ${escapeHtml(run.status)}">${escapeHtml(run.status)}</span></div>
           <div class="run-meta">
             <span>${escapeHtml(run.institution_id || "unknown institution")}</span>
+            <span>${escapeHtml(run.experiment_name || "experiment")} / ${escapeHtml(run.run_id || "run")}</span>
             <span>Epoch ${escapeHtml(epoch)}</span>
             <span>${escapeHtml(formatTime(run.updated_at))}</span>
           </div>`;
@@ -318,7 +320,7 @@ _INDEX_HTML = """<!doctype html>
       const latest = run.latest_metrics || {};
       const nested = latest.metrics || {};
       byId("run-name").textContent = run.name;
-      byId("run-path").textContent = run.path;
+      byId("run-path").textContent = `${run.experiment_name || "experiment"} / ${run.run_id || "run"} | ${run.path}`;
       const status = byId("run-status");
       status.textContent = run.status;
       status.className = `status ${run.status}`;

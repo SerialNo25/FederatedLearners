@@ -73,13 +73,17 @@ python main.py federated_training --config configs/federated/global.toml
 Artifacts are written to:
 
 ```text
-data/experiments/<experiment_name>/
+data/experiments/<experiment_name>/run_###/
 ```
+
+Each execution gets the next numbered run folder, such as `run_001` and `run_002`, so repeated
+executions of the same federated config do not overwrite or append to prior results.
 
 Files:
 - `config.json`
 - `train.log`
 - `metrics.jsonl`
+- `run_state.json`
 - `loss_plot.svg`
 - `pr_auc_plot.svg`
 - `model.pt`

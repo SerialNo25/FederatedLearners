@@ -32,11 +32,13 @@ or:
 
 ## Outputs
 
-The stage writes outputs under `data/experiments/<experiment_name>/`:
+The stage writes outputs under `data/experiments/<experiment_name>/run_###/`.
+Each execution gets the next numbered run folder so repeated evaluations do not mix artifacts.
 
 - `config.json`
 - `train.log`
 - `metrics.jsonl`
+- `run_state.json`
 - `evaluation.json`
 
 `evaluation.json` contains:

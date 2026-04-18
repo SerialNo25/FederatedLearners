@@ -142,6 +142,9 @@ class LocalTrainingStage(Stage):
                 {
                     "stage": "local_training",
                     "status": status,
+                    "experiment_name": self.config.experiment_name,
+                    "run_id": self.experiment_dir.name,
+                    "run_dir": str(self.experiment_dir),
                     "updated_at": datetime.now(timezone.utc).isoformat(),
                 },
                 indent=2,

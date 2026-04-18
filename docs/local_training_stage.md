@@ -31,6 +31,7 @@ Helper scripts:
 ```
 
 The `bank_1`, `bank_2`, and `bank_3` config files each set a distinct `experiment_name`, so artifacts are written into separate experiment folders under `data/experiments/`.
+Each execution gets the next numbered run folder, such as `run_001` and `run_002`, so repeated executions never mix artifacts.
 
 ## Configuration compatibility
 
@@ -42,17 +43,13 @@ If `local_institution_id` is omitted, the first entry in `[[institutions]]` is u
 
 ## Outputs
 
-The stage writes artifacts under `data/experiments/<experiment_name>/`:
+The stage writes artifacts under `data/experiments/<experiment_name>/run_###/`:
 
 - `config.json`
 - `train.log`
 - `metrics.jsonl`
-- `loss_plot.svg`
-- `precision_recall_plot.svg`
-- `roc_plot.svg`
+- `run_state.json`
 - `model.pt`
 
-`metrics.jsonl` includes one record per local epoch with `train_loss` and `val_loss`, and
-`loss_plot.svg` renders those losses directly from the logged metrics.
-`precision_recall_plot.svg` renders the final model's validation-set precision-recall curve.
-`roc_plot.svg` renders the final model's validation-set ROC curve.
+`metrics.jsonl` includes one record per local epoch with `train_loss` and `val_loss`.
+`run_state.json` records the stage, status, experiment name, run ID, and run directory.

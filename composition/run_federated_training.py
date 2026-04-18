@@ -6,7 +6,7 @@ from pathlib import Path
 
 import tomli
 
-from domain.logging.experiment_logger import StageExperimentLogger
+from domain.logging.experiment_logger import StageExperimentLogger, allocate_experiment_run_dir
 from domain.models.model_registry import MODEL_REGISTRY
 from stages.federated_training.config import FederatedTrainingConfig
 from stages.federated_training.stage import FederatedTrainingStage
@@ -37,7 +37,7 @@ def run_federated_training(config_path: str | Path) -> Path:
         institutions=institutions,
     )
 
-    experiment_dir = config.output_dir / config.experiment_name
+    experiment_dir = allocate_experiment_run_dir(config.output_dir, config.experiment_name)
     experiment_logger = StageExperimentLogger(
         experiment_dir=str(experiment_dir),
         stage_name="federated_training",
