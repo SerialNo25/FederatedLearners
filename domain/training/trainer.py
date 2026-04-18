@@ -87,7 +87,7 @@ def _train_torch_model(
         epoch_loss = 0.0
         n_batches = 0
 
-        for start in range(0, n, config.batch_size):
+        for start in tqdm(range(0, n, config.batch_size), desc="Batches", leave=False):
             idx = perm[start : start + config.batch_size]
             batch_inputs = inputs[idx]
             batch_targets = targets[idx]

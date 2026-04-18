@@ -40,6 +40,8 @@ class _TabNetBackbone(nn.Module):
         relaxation_factor: float,
     ) -> None:
         super().__init__()
+        self.decision_dim = decision_dim
+        self.attention_dim = attention_dim
         self.n_steps = n_steps
         self.relaxation_factor = relaxation_factor
 
@@ -59,14 +61,14 @@ class _TabNetBackbone(nn.Module):
         sparsity_penalty = torch.tensor(0.0, device=x.device)
 
         initial_out = self.initial(x)
-        _, attention = torch.chunk(initial_out, 2, dim=1)
+        _, attention = torch.split(initial_out, [self.decision_dim, self.attention_dim], dim=1)
 
         for step in range(self.n_steps):
             mask = self.attentive_transformers[step](attention, prior)
             masked_x = x * mask
 
             transformed = self.feature_transformers[step](masked_x)
-            decision, attention = torch.chunk(transformed, 2, dim=1)
+            decision, attention = torch.split(transformed, [self.decision_dim, self.attention_dim], dim=1)
             decision = torch.relu(decision)
             aggregated_decision = aggregated_decision + decision
 

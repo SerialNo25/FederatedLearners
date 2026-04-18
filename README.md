@@ -64,6 +64,34 @@ See stage documentation:
 
 - `docs/local_training_stage.md`
 
+## Run hyperparameter optimization
+
+```bash
+python main.py --config configs/hyperparameter_optimization/bank_1.toml
+```
+
+Helper script:
+
+```bash
+./scripts/run_hyperparameter_optimization_bank_1.sh
+```
+
+The bank 1 Optuna study writes to:
+
+```text
+data/experiments/hpo_local_bank_1_tabnet/optuna.db
+```
+
+Open the Optuna dashboard with:
+
+```bash
+optuna-dashboard sqlite:///data/experiments/hpo_local_bank_1_tabnet/optuna.db
+```
+
+See stage documentation:
+
+- `docs/hyperparameter_optimization_stage.md`
+
 ## Run evaluation
 
 ```bash
