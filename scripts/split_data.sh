@@ -4,4 +4,4 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.." || exit 1
 
-python main.py dataset_split --preset default
+python main.py --config configs/pipeline/dataset_split.toml

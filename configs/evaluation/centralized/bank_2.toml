@@ -1,0 +1,6 @@
+stage = "evaluation"
+experiment_name = "eval_global_bank2"
+output_dir = "data/experiments"
+model_path = "data/experiments/global_centralized_tabnet/model.pt"
+dataset_path = "data/train_test_splits/bank_2_test.csv"
+classification_threshold = 0.5

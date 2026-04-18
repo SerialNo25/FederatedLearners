@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -13,6 +14,7 @@ from stages.local_training.config import LocalTrainingConfig
 class FederatedTrainingConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
+    stage: Literal["federated_training"] = "federated_training"
     experiment_name: str = "federated_global"
     output_dir: Path = Path("data/experiments")
     num_rounds: int

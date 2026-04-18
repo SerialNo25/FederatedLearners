@@ -1,0 +1,8 @@
+stage = "ensemble"
+experiment_name = "ensemble_L3_Fincl"
+output_dir = "data/experiments"
+local_model_path = "data/experiments/local_bank_3_tabnet/model.pt"
+federated_model_path = "data/experiments/federated_global/model.pt"
+dataset_path = "data/train_test_splits/bank_3_test.csv"
+ensemble_weight = 0.5
+classification_threshold = 0.5

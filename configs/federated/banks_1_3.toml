@@ -1,0 +1,12 @@
+stage = "federated_training"
+experiment_name = "federated_banks_1_3"
+output_dir = "data/experiments"
+model_config = "configs/shared/model.toml"
+
+num_rounds = 10
+proximal_mu = 0.01
+
+institution_configs = [
+    "configs/local_training/bank_1.toml",
+    "configs/local_training/bank_3.toml",
+]

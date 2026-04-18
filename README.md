@@ -3,7 +3,7 @@
 ## Run federated training
 
 ```bash
-python main.py federated_training --preset default
+python main.py --config configs/federated/global.toml
 ```
 
 Helper scripts:
@@ -15,10 +15,10 @@ Helper scripts:
 ./scripts/run_federated_training_banks_2_3.sh
 ```
 
-You can still pass an explicit config path when needed:
+The runnable config declares its stage:
 
-```bash
-python main.py federated_training --config configs/federated.toml
+```toml
+stage = "federated_training"
 ```
 
 See stage documentation:
@@ -29,7 +29,7 @@ See stage documentation:
 ## Build harmonized datasets
 
 ```bash
-python main.py harmonized_data --preset default
+python main.py --config configs/pipeline/harmonized_data.toml
 ```
 
 Helper script:
@@ -43,10 +43,10 @@ Run this before `dataset_split` if you start from the raw bank CSV files in `dat
 ## Run local-only training
 
 ```bash
-python main.py local_training --preset default
-python main.py local_training --preset bank_1
-python main.py local_training --preset bank_2
-python main.py local_training --preset bank_3
+python main.py --config configs/local_training/default.toml
+python main.py --config configs/local_training/bank_1.toml
+python main.py --config configs/local_training/bank_2.toml
+python main.py --config configs/local_training/bank_3.toml
 ```
 
 Helper scripts:
@@ -67,7 +67,7 @@ See stage documentation:
 ## Run evaluation
 
 ```bash
-python main.py evaluation --preset default
+python main.py --config configs/evaluation/default.toml
 ```
 
 Helper script:

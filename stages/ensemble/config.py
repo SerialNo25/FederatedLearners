@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -10,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 class EnsembleConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
+    stage: Literal["ensemble"] = "ensemble"
     experiment_name: str = "ensemble"
     output_dir: Path = Path("data/experiments")
     local_model_path: Path

@@ -1,7 +1,0 @@
-experiment_name = "ensemble_L2_Fincl"
-output_dir = "data/experiments"
-local_model_path = "data/experiments/local_bank_2_tabnet/model.pt"
-federated_model_path = "data/experiments/federated_global/model.pt"
-dataset_path = "data/train_test_splits/bank_2_test.csv"
-ensemble_weight = 0.5
-classification_threshold = 0.5

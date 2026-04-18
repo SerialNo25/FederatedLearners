@@ -5,42 +5,42 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.." || exit 1
 
 echo "=== Stage 1: Dataset Split ==="
-python main.py dataset_split --preset default
+python main.py --config configs/pipeline/dataset_split.toml
 
 echo "=== Stage 2: Local Training ==="
-python main.py local_training --preset bank_1
-python main.py local_training --preset bank_2
-python main.py local_training --preset bank_3
+python main.py --config configs/local_training/bank_1.toml
+python main.py --config configs/local_training/bank_2.toml
+python main.py --config configs/local_training/bank_3.toml
 
 echo "=== Stage 3: Federated Training ==="
-python main.py federated_training --preset default
-python main.py federated_training --preset banks_1_2
-python main.py federated_training --preset banks_1_3
-python main.py federated_training --preset banks_2_3
+python main.py --config configs/federated/global.toml
+python main.py --config configs/federated/banks_1_2.toml
+python main.py --config configs/federated/banks_1_3.toml
+python main.py --config configs/federated/banks_2_3.toml
 
 echo "=== Stage 4: Evaluation -- Local Models ==="
-python main.py evaluation --preset local_bank1
-python main.py evaluation --preset local_bank2
-python main.py evaluation --preset local_bank3
+python main.py --config configs/evaluation/local/bank_1.toml
+python main.py --config configs/evaluation/local/bank_2.toml
+python main.py --config configs/evaluation/local/bank_3.toml
 
 echo "=== Stage 5: Evaluation -- Inclusive Federated ==="
-python main.py evaluation --preset fincl_bank1
-python main.py evaluation --preset fincl_bank2
-python main.py evaluation --preset fincl_bank3
+python main.py --config configs/evaluation/federated/inclusive/bank_1.toml
+python main.py --config configs/evaluation/federated/inclusive/bank_2.toml
+python main.py --config configs/evaluation/federated/inclusive/bank_3.toml
 
 echo "=== Stage 6: Evaluation -- Exclusive Federated ==="
-python main.py evaluation --preset fexcl1_bank1
-python main.py evaluation --preset fexcl2_bank2
-python main.py evaluation --preset fexcl3_bank3
+python main.py --config configs/evaluation/federated/exclusive/bank_1.toml
+python main.py --config configs/evaluation/federated/exclusive/bank_2.toml
+python main.py --config configs/evaluation/federated/exclusive/bank_3.toml
 
 echo "=== Stage 7: Ensemble -- Lk + Fexcl ==="
-python main.py ensemble --preset L1_Fexcl1
-python main.py ensemble --preset L2_Fexcl2
-python main.py ensemble --preset L3_Fexcl3
+python main.py --config configs/ensemble/exclusive/bank_1.toml
+python main.py --config configs/ensemble/exclusive/bank_2.toml
+python main.py --config configs/ensemble/exclusive/bank_3.toml
 
 echo "=== Stage 8: Ensemble -- Lk + Fincl ==="
-python main.py ensemble --preset L1_Fincl
-python main.py ensemble --preset L2_Fincl
-python main.py ensemble --preset L3_Fincl
+python main.py --config configs/ensemble/inclusive/bank_1.toml
+python main.py --config configs/ensemble/inclusive/bank_2.toml
+python main.py --config configs/ensemble/inclusive/bank_3.toml
 
 echo "=== All stages completed ==="

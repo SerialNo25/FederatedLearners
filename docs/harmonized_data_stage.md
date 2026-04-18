@@ -4,7 +4,7 @@ The `harmonized_data` stage converts the raw bank-specific CSV files into the sh
 
 It follows the repository architecture:
 
-- `main.py` selects the stage from the registry.
+- `main.py` reads the `stage` value from the TOML config and dispatches to the matching composition root.
 - `composition/run_harmonized_data.py` loads and validates TOML config, wires dependencies, and executes the stage.
 - `stages/harmonized_data/stage.py` orchestrates raw-to-harmonized dataset creation and schema validation.
 - `domain/harmonization/raw_data_harmonizer.py` contains the reusable bank-specific transformation logic.
@@ -12,7 +12,7 @@ It follows the repository architecture:
 ## Default Run
 
 ```bash
-python main.py harmonized_data --preset default
+python main.py --config configs/pipeline/harmonized_data.toml
 ```
 
 Helper script:

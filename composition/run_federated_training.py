@@ -28,6 +28,7 @@ def run_federated_training(config_path: str | Path) -> Path:
         institutions.append(LocalTrainingConfig.from_dict(ic_dict))
 
     config = FederatedTrainingConfig(
+        stage=fed_dict.get("stage", "federated_training"),
         experiment_name=fed_dict.get("experiment_name", "federated_global"),
         output_dir=fed_dict.get("output_dir", "data/experiments"),
         num_rounds=fed_dict["num_rounds"],

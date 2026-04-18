@@ -18,6 +18,7 @@ class RawDatasetConfig(BaseModel):
 class HarmonizedDataConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
+    stage: Literal["harmonized_data"] = "harmonized_data"
     output_dir: Path = Path("data/harmonized")
     seed: int = 42
     sparkov_target_size: int = 500_000

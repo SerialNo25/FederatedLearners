@@ -49,12 +49,41 @@ class EvaluationStageIntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir_name:
             tmp_dir = Path(tmp_dir_name)
             dataset_path = tmp_dir / "dataset.csv"
+            columns = [
+                "amount",
+                "log_amount",
+                "amount_zscore",
+                "amount_percentile",
+                "hour_sin",
+                "hour_cos",
+                "dow_sin",
+                "dow_cos",
+                "is_weekend",
+                "is_night",
+                "is_round_amount",
+                "gender_M",
+                "age_normalized",
+                "geo_encoded",
+                "cat_grocery",
+                "cat_shopping",
+                "cat_entertainment",
+                "cat_gas_transport",
+                "cat_food_dining",
+                "cat_health_personal",
+                "cat_other",
+                "is_fraud",
+            ]
+            rows = [
+                [10.0, 2.3, -0.5, 0.2, 0.7, -0.7, 0.0, 1.0, 0, 0, 1, 1, 0.25, 0.1, 1, 0, 0, 0, 0, 0, 0, 0],
+                [120.0, 4.8, 1.4, 0.9, -0.5, -0.8, 0.4, -0.9, 0, 0, 1, 0, 0.55, 0.3, 0, 1, 0, 0, 0, 0, 0, 1],
+                [15.0, 2.7, -0.4, 0.3, -0.9, 0.3, -0.4, -0.9, 1, 1, 0, 1, 0.35, 0.2, 0, 0, 1, 0, 0, 0, 0, 0],
+                [250.0, 5.5, 2.1, 0.98, -0.3, 0.95, -0.8, 0.6, 1, 1, 1, 0, 0.75, 0.5, 0, 0, 0, 1, 0, 0, 0, 1],
+            ]
             dataset_path.write_text(
-                "amount,log_amount,hour_of_day,day_of_week,is_fraud\n"
-                "10.0,2.3,9,1,0\n"
-                "120.0,4.8,14,2,1\n"
-                "15.0,2.7,20,5,0\n"
-                "250.0,5.5,23,6,1\n",
+                ",".join(columns)
+                + "\n"
+                + "\n".join(",".join(str(value) for value in row) for row in rows)
+                + "\n",
                 encoding="utf-8",
             )
 
@@ -67,7 +96,7 @@ class EvaluationStageIntegrationTests(unittest.TestCase):
                 "sparsity_weight": 1e-4,
             }
             model_factory = MODEL_REGISTRY.get_factory("tabnet", model_config)
-            model = model_factory(4)
+            model = model_factory(21)
 
             checkpoint_path = tmp_dir / "model.pt"
             ModelArtifactWriter.write_model_checkpoint(
@@ -79,6 +108,7 @@ class EvaluationStageIntegrationTests(unittest.TestCase):
 
             config_path = tmp_dir / "evaluation.toml"
             config_path.write_text(
+                "stage = \"evaluation\"\n"
                 "experiment_name = \"tmp_eval\"\n"
                 f"output_dir = \"{(tmp_dir / 'outputs').as_posix()}\"\n"
                 f"model_path = \"{checkpoint_path.as_posix()}\"\n"

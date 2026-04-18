@@ -1,0 +1,14 @@
+stage = "local_training"
+experiment_name = "local_bank_3_tabnet"
+output_dir = "data/experiments"
+model_config = "configs/shared/model.toml"
+
+institution_id = "bank_3"
+dataset_path = "data/train_test_splits/bank_3_train.csv"
+
+local_epochs = 5
+learning_rate = 0.02
+fraud_weight = 10
+batch_size = 256
+classification_threshold = 0.5
+seed = 42
