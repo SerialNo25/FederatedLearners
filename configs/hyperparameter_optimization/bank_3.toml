@@ -1,0 +1,52 @@
+stage = "hyperparameter_optimization"
+experiment_name = "hpo_local_bank_3_tabnet"
+output_dir = "data/experiments"
+model_config = "configs/shared/model.toml"
+
+institution_id = "bank_3"
+dataset_path = "data/train_test_splits/bank_3_train.csv"
+
+n_trials = 100
+study_name = "hpo_local_bank_3_tabnet"
+storage_url = "sqlite:///data/experiments/hpo_local_bank_3_tabnet/optuna.db"
+load_if_exists = true
+validation_fraction = 0.2
+objective_metric = "val_pr_auc"
+direction = "maximize"
+seed = 42
+
+local_epochs = 20
+learning_rate = 0.01
+fraud_weight = 5
+batch_size = 1024
+classification_threshold = 0.5
+
+[search_space.training.learning_rate]
+low = 0.00001
+high = 0.03
+log = true
+
+[search_space.training.fraud_weight]
+low = 2
+high = 100
+log = true
+
+[search_space.training.batch_size]
+choices = [512, 1024, 2048, 4096, 8192]
+
+[search_space.tabnet.attention_dim]
+choices = [8, 16, 32]
+
+[search_space.tabnet.steps]
+low = 2
+high = 50
+step = 1
+
+[search_space.tabnet.relaxation_factor]
+low = 1.1
+high = 2.0
+
+[search_space.tabnet.sparsity_weight]
+low = 0.00001
+high = 0.001
+log = true

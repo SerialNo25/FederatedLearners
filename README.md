@@ -64,24 +64,32 @@ See stage documentation:
 
 ```bash
 python main.py --config configs/hyperparameter_optimization/bank_1.toml
+python main.py --config configs/hyperparameter_optimization/bank_2.toml
+python main.py --config configs/hyperparameter_optimization/bank_3.toml
 ```
 
-Helper script:
+Helper scripts:
 
 ```bash
 ./scripts/run_hyperparameter_optimization_bank_1.sh
+./scripts/run_hyperparameter_optimization_bank_2.sh
+./scripts/run_hyperparameter_optimization_bank_3.sh
 ```
 
-The bank 1 Optuna study writes to:
+The bank Optuna studies write to:
 
 ```text
 data/experiments/hpo_local_bank_1_tabnet/optuna.db
+data/experiments/hpo_local_bank_2_tabnet/optuna.db
+data/experiments/hpo_local_bank_3_tabnet/optuna.db
 ```
 
 Open the Optuna dashboard with:
 
 ```bash
 optuna-dashboard sqlite:///data/experiments/hpo_local_bank_1_tabnet/optuna.db
+optuna-dashboard sqlite:///data/experiments/hpo_local_bank_2_tabnet/optuna.db
+optuna-dashboard sqlite:///data/experiments/hpo_local_bank_3_tabnet/optuna.db
 ```
 
 See stage documentation:

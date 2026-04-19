@@ -6,37 +6,47 @@ The `hyperparameter_optimization` stage runs an Optuna study for local instituti
 It trains one local model per trial, evaluates on a stratified validation split, and optimizes a
 configured validation metric.
 
-The default bank 1 configuration optimizes PR-AUC for `bank_1` using the same dataset and shared
+The bank-specific configurations optimize PR-AUC using each bank's training dataset and the shared
 TabNet model configuration used by `local_training`.
 
-The bank 1 configuration persists the Optuna study to SQLite at:
+The bank configurations persist Optuna studies to SQLite at:
 
 ```text
 data/experiments/hpo_local_bank_1_tabnet/optuna.db
+data/experiments/hpo_local_bank_2_tabnet/optuna.db
+data/experiments/hpo_local_bank_3_tabnet/optuna.db
 ```
 
 ## Run
 
 ```bash
 python main.py --config configs/hyperparameter_optimization/bank_1.toml
+python main.py --config configs/hyperparameter_optimization/bank_2.toml
+python main.py --config configs/hyperparameter_optimization/bank_3.toml
 ```
 
 You may keep the stage name as a CLI guard if desired:
 
 ```bash
 python main.py hyperparameter_optimization --config configs/hyperparameter_optimization/bank_1.toml
+python main.py hyperparameter_optimization --config configs/hyperparameter_optimization/bank_2.toml
+python main.py hyperparameter_optimization --config configs/hyperparameter_optimization/bank_3.toml
 ```
 
 Helper script:
 
 ```bash
 ./scripts/run_hyperparameter_optimization_bank_1.sh
+./scripts/run_hyperparameter_optimization_bank_2.sh
+./scripts/run_hyperparameter_optimization_bank_3.sh
 ```
 
 Open the Optuna dashboard with:
 
 ```bash
 optuna-dashboard sqlite:///data/experiments/hpo_local_bank_1_tabnet/optuna.db
+optuna-dashboard sqlite:///data/experiments/hpo_local_bank_2_tabnet/optuna.db
+optuna-dashboard sqlite:///data/experiments/hpo_local_bank_3_tabnet/optuna.db
 ```
 
 ## Configuration
