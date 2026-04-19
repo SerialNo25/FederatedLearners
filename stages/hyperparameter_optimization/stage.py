@@ -15,6 +15,7 @@ from domain.dataset.dataset_loader import load_institution_dataset, split_datase
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import InstitutionMetrics, evaluate_institution
 from domain.models.model_registry import MODEL_REGISTRY
+from domain.training.class_weighting import compute_binary_class_balance
 from domain.training.trainer import TrainingConfig, train_local_model
 from stages.hyperparameter_optimization.config import (
     FloatSearchSpace,
@@ -56,6 +57,7 @@ class HyperparameterOptimizationStage(Stage):
             seed=self.config.seed,
             val_fraction=self.config.validation_fraction,
         )
+        class_balance = compute_binary_class_balance(train_dataset.labels)
 
         self.experiment_logger.info(f"start_time={datetime.now(timezone.utc).isoformat()}")
         self.experiment_logger.info(f"config={json.dumps(self.config.to_dict(), indent=2)}")
@@ -63,6 +65,13 @@ class HyperparameterOptimizationStage(Stage):
         self.experiment_logger.info(
             f"dataset_split train={len(train_dataset.features)} val={len(val_dataset.features)}"
         )
+        self.experiment_logger.info(
+            "train_class_balance "
+            f"negatives={class_balance.negatives} positives={class_balance.positives} "
+            f"positive_rate={class_balance.positive_rate:.6f} "
+            f"recommended_pos_weight={class_balance.pos_weight:.6f}"
+        )
+        self._warn_if_fraud_weight_search_misses_balance(class_balance.pos_weight)
         self.experiment_logger.info(
             f"optuna n_trials={self.config.n_trials} objective={self.config.objective_metric} "
             f"direction={self.config.direction} storage_url={self.config.storage_url}"
@@ -354,6 +363,24 @@ class HyperparameterOptimizationStage(Stage):
             if sqlite_path and sqlite_path != ":memory:":
                 Path(sqlite_path).parent.mkdir(parents=True, exist_ok=True)
         return storage_url
+
+    def _warn_if_fraud_weight_search_misses_balance(self, recommended_pos_weight: float) -> None:
+        search_space = self.config.search_space.training.fraud_weight
+        if search_space is None:
+            if self.config.fraud_weight < 0.5 * recommended_pos_weight:
+                self.experiment_logger.warning(
+                    "fraud_weight_below_recommended "
+                    f"configured={self.config.fraud_weight:.6f} "
+                    f"recommended_pos_weight={recommended_pos_weight:.6f}"
+                )
+            return
+
+        if not search_space.low <= recommended_pos_weight <= search_space.high:
+            self.experiment_logger.warning(
+                "fraud_weight_search_excludes_recommended "
+                f"low={search_space.low:.6f} high={search_space.high:.6f} "
+                f"recommended_pos_weight={recommended_pos_weight:.6f}"
+            )
 
     def _write_trials_csv(self, study: optuna.Study) -> None:
         path = self.experiment_dir / "optuna_trials.csv"

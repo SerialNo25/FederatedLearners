@@ -3,6 +3,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
+from stages.hyperparameter_optimization.config import (
+    FloatSearchSpace,
+    HyperparameterSearchSpace,
+    TrainingSearchSpace,
+)
 from stages.hyperparameter_optimization.stage import HyperparameterOptimizationStage
 
 
@@ -30,6 +35,24 @@ class HyperparameterOptimizationStageTests(unittest.TestCase):
 
             self.assertEqual(stage._prepare_storage_url(), f"sqlite:///{db_path}")
             self.assertTrue(db_path.parent.exists())
+
+    def test_warns_when_fraud_weight_search_excludes_recommended_balance(self):
+        stage = HyperparameterOptimizationStage.__new__(HyperparameterOptimizationStage)
+        warnings = []
+        stage.config = SimpleNamespace(
+            search_space=HyperparameterSearchSpace(
+                training=TrainingSearchSpace(
+                    fraud_weight=FloatSearchSpace(low=1.0, high=10.0)
+                )
+            ),
+            fraud_weight=1.0,
+        )
+        stage.experiment_logger = SimpleNamespace(warning=warnings.append)
+
+        stage._warn_if_fraud_weight_search_misses_balance(25.0)
+
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("fraud_weight_search_excludes_recommended", warnings[0])
 
 
 if __name__ == "__main__":

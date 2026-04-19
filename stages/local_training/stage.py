@@ -14,6 +14,7 @@ from domain.federated.model_artifact_writer import ModelArtifactWriter
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import evaluate_institution
 from domain.models.model_registry import ModelFactoryProtocol
+from domain.training.class_weighting import compute_binary_class_balance
 from domain.training.trainer import TrainingConfig, train_local_model
 from stages.local_training.config import LocalTrainingConfig
 from stages.stage import Stage
@@ -48,12 +49,19 @@ class LocalTrainingStage(Stage):
             )
 
         train_dataset, val_dataset = split_dataset(dataset, seed=self.config.seed, val_fraction=0.2)
+        class_balance = compute_binary_class_balance(train_dataset.labels)
 
         self.experiment_logger.info(f"start_time={datetime.now(timezone.utc).isoformat()}")
         self.experiment_logger.info(f"config={json.dumps(self.config.to_dict(), indent=2)}")
         self.experiment_logger.info(f"local_institution={dataset.institution_id}")
         self.experiment_logger.info(
             f"dataset_split train={len(train_dataset.features)} val={len(val_dataset.features)}"
+        )
+        self.experiment_logger.info(
+            "train_class_balance "
+            f"negatives={class_balance.negatives} positives={class_balance.positives} "
+            f"positive_rate={class_balance.positive_rate:.6f} "
+            f"recommended_pos_weight={class_balance.pos_weight:.6f}"
         )
         self.experiment_logger.info(
             f"fraud_weight={self.config.fraud_weight} classification_threshold={self.config.classification_threshold}"
