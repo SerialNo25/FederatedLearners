@@ -1,5 +1,5 @@
 stage = "local_training"
-experiment_name = "local_bank_2_tabnet"
+experiment_name = "local_bank_2_banksim"
 output_dir = "data/experiments"
 model_config = "configs/shared/model.toml"
 
@@ -8,7 +8,7 @@ dataset_path = "data/train_test_splits/bank_2_train.csv"
 
 local_epochs = 5
 learning_rate = 0.02
-fraud_weight = 30
-batch_size = 4096
+fraud_weight = 10
+batch_size = 256
 classification_threshold = 0.5
 seed = 42

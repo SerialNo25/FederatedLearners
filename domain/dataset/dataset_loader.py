@@ -30,9 +30,10 @@ def load_institution_dataset(institution_id: str, csv_path: str | Path) -> Insti
     with path.open("r", newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
         header = reader.fieldnames or []
-        if header != ALL_COLUMNS:
+        if not all(col in header for col in ALL_COLUMNS):
+            missing = [col for col in ALL_COLUMNS if col not in header]
             raise DatasetValidationError(
-                f"{path} has invalid columns. Expected exact order: {ALL_COLUMNS}"
+                f"{path} is missing required columns: {missing}"
             )
 
         features: list[list[float]] = []

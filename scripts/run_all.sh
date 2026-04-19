@@ -43,4 +43,7 @@ python main.py --config configs/ensemble/inclusive/bank_1.toml
 python main.py --config configs/ensemble/inclusive/bank_2.toml
 python main.py --config configs/ensemble/inclusive/bank_3.toml
 
+echo "=== Stage 9: Comparison Report ==="
+python scripts/comparison_report.py
+
 echo "=== All stages completed ==="
