@@ -151,6 +151,96 @@ class TrainingRunMonitorTests(unittest.TestCase):
             self.assertEqual(run["run_id"], "run_001")
             self.assertTrue(run["artifacts"]["model"])
 
+    def test_lists_federated_runs_when_stage_requested(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            local_run = root / "local_bank_1_tabnet" / "run_001"
+            local_run.mkdir(parents=True)
+            (local_run / "config.json").write_text(
+                json.dumps({"stage": "local_training", "institution_id": "bank_1"}),
+                encoding="utf-8",
+            )
+
+            federated_run = root / "federated_banks_1_2" / "run_001"
+            federated_run.mkdir(parents=True)
+            (federated_run / "config.json").write_text(
+                json.dumps(
+                    {
+                        "stage": "federated_training",
+                        "experiment_name": "federated_banks_1_2",
+                        "num_rounds": 3,
+                        "proximal_mu": 0.15,
+                        "institutions": [
+                            {"institution_id": "bank_1"},
+                            {"institution_id": "bank_2"},
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (federated_run / "metrics.jsonl").write_text(
+                json.dumps(
+                    {
+                        "stage": "federated_training",
+                        "epoch": 2,
+                        "train_loss": 0.41,
+                        "val_loss": 0.51,
+                        "pr_auc": 0.72,
+                        "metrics": {
+                            "local_loss": {"bank_1": 0.4, "bank_2": 0.42},
+                            "local_num_samples": {"bank_1": 100, "bank_2": 120},
+                            "local_parameter_delta_l2": {"bank_1": 1.2, "bank_2": 1.4},
+                            "institution_evaluation": {
+                                "bank_1": {"loss": 0.5, "pr_auc": 0.7, "f1": 0.6},
+                                "bank_2": {"loss": 0.52, "pr_auc": 0.74, "f1": 0.62},
+                            },
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (federated_run / "profile.jsonl").write_text(
+                json.dumps({"stage": "federated_training", "epoch": 2, "round_seconds": 1.5})
+                + "\n",
+                encoding="utf-8",
+            )
+
+            monitor = TrainingRunMonitor(TrainingRunMonitorConfig(experiments_dir=root))
+            runs = monitor.list_runs(stage="federated_training")
+            run = monitor.get_run("federated_banks_1_2/run_001", stage="federated_training")
+
+            self.assertEqual([item["name"] for item in runs], ["federated_banks_1_2/run_001"])
+            self.assertEqual(run["stage"], "federated_training")
+            self.assertEqual(run["run_type"], "exclusive")
+            self.assertEqual(run["institution_ids"], ["bank_1", "bank_2"])
+            self.assertEqual(run["total_epochs"], 3)
+            self.assertEqual(run["proximal_mu"], 0.15)
+            self.assertTrue(run["artifacts"]["profile"])
+            self.assertEqual(run["profile_history"][0]["round_seconds"], 1.5)
+
+    def test_identifies_global_federated_runs(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_dir = root / "federated_global" / "run_001"
+            run_dir.mkdir(parents=True)
+            (run_dir / "config.json").write_text(
+                json.dumps(
+                    {
+                        "stage": "federated_training",
+                        "experiment_name": "federated_global",
+                        "num_rounds": 1,
+                        "institutions": [{"institution_id": "bank_1"}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            monitor = TrainingRunMonitor(TrainingRunMonitorConfig(experiments_dir=root))
+            run = monitor.get_run("federated_global/run_001", stage="federated_training")
+
+            self.assertEqual(run["run_type"], "global")
+
 
 if __name__ == "__main__":
     unittest.main()

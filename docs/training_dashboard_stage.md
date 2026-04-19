@@ -2,10 +2,16 @@
 
 ## Purpose
 
-The `training_dashboard` stage starts a browser-based monitor for local training runs.
+The `training_dashboard` stage starts a browser-based monitor for local and federated
+training runs.
 It reads experiment artifacts from `data/experiments/` and does not own model training.
 
-The dashboard focuses on `local_training` runs and reads each numbered run folder:
+The dashboard has navigation tabs for:
+
+- local training runs
+- federated training runs
+
+It reads each numbered run folder:
 
 ```text
 data/experiments/<experiment_name>/run_###/
@@ -46,7 +52,7 @@ Start the dashboard in one terminal, then start local training in another termin
 ./scripts/run_local_training_bank_1.sh
 ```
 
-## Live Metrics
+## Local Live Metrics
 
 Local training writes one `metrics.jsonl` record per epoch. The dashboard polls these artifacts
 and displays:
@@ -57,6 +63,31 @@ and displays:
 - validation loss
 - validation PR-AUC
 - training log tail
+
+## Federated Live Metrics
+
+Federated training writes one `metrics.jsonl` record per round. The dashboard polls the same
+artifact root and displays both inclusive global runs and exclusive `banks_i_j`-style runs.
+
+The federated tab displays:
+
+- run status
+- current round
+- run type: global, exclusive, or federated
+- participating institutions
+- FedProx `proximal_mu`
+- weighted train loss
+- validation loss and PR-AUC
+- per-institution samples, local loss, evaluation loss, PR-AUC, F1, and parameter delta L2
+- training log tail
+
+The dashboard infers `global` runs from experiment names containing `global` and exclusive
+runs from names containing `banks_`. Federated runs should still use the normal experiment
+structure:
+
+```text
+data/experiments/<experiment_name>/run_###/
+```
 
 ## Configuration
 

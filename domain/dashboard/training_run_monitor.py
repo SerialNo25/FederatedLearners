@@ -21,23 +21,24 @@ class TrainingRunMonitor:
     def __init__(self, config: TrainingRunMonitorConfig) -> None:
         self.config = config
 
-    def list_runs(self) -> list[dict[str, Any]]:
+    def list_runs(self, stage: str = "local_training") -> list[dict[str, Any]]:
         runs = [self._summarize_run(path) for path in self._candidate_run_dirs()]
-        local_runs = [run for run in runs if run is not None and run["stage"] == "local_training"]
-        return sorted(local_runs, key=lambda run: run["updated_at"] or "", reverse=True)
+        stage_runs = [run for run in runs if run is not None and run["stage"] == stage]
+        return sorted(stage_runs, key=lambda run: run["updated_at"] or "", reverse=True)
 
-    def get_run(self, run_name: str) -> dict[str, Any]:
+    def get_run(self, run_name: str, stage: str = "local_training") -> dict[str, Any]:
         run_dir = self._resolve_run_dir(run_name)
         if run_dir is None:
             raise KeyError(run_name)
 
         summary = self._summarize_run(run_dir)
-        if summary is None or summary["stage"] != "local_training":
+        if summary is None or summary["stage"] != stage:
             raise KeyError(run_name)
 
         return {
             **summary,
             "metrics_history": self._read_metrics(run_dir / "metrics.jsonl"),
+            "profile_history": self._read_metrics(run_dir / "profile.jsonl"),
             "log_tail": self._read_log_tail(run_dir / "train.log"),
         }
 
@@ -87,8 +88,16 @@ class TrainingRunMonitor:
         display_name = self._display_name(run_dir)
 
         total_epochs = latest.get("total_epochs") or config.get("local_epochs")
+        if stage == "federated_training":
+            total_epochs = latest.get("total_rounds") or config.get("num_rounds")
         epoch = latest.get("epoch")
         institution_id = config.get("institution_id") or _nested_get(latest, "metrics", "institution_id")
+        institutions = config.get("institutions") if isinstance(config.get("institutions"), list) else []
+        institution_ids = [
+            item.get("institution_id")
+            for item in institutions
+            if isinstance(item, dict) and item.get("institution_id")
+        ]
 
         return {
             "name": display_name,
@@ -96,15 +105,20 @@ class TrainingRunMonitor:
             "stage": stage,
             "status": self._status(run_dir, updated_at, epoch, total_epochs, run_state.get("status")),
             "institution_id": institution_id,
+            "institution_ids": institution_ids,
             "experiment_name": config.get("experiment_name") or run_state.get("experiment_name") or run_dir.parent.name,
             "run_id": run_state.get("run_id") or (run_dir.name if run_dir.parent == self.config.experiments_dir else run_dir.name),
             "epoch": epoch,
             "total_epochs": total_epochs,
+            "proximal_mu": config.get("proximal_mu"),
+            "num_rounds": config.get("num_rounds"),
+            "run_type": self._run_type(stage=stage, experiment_name=config.get("experiment_name") or run_dir.parent.name),
             "updated_at": updated_at,
             "latest_metrics": latest,
             "artifacts": {
                 "config": (run_dir / "config.json").exists(),
                 "metrics": (run_dir / "metrics.jsonl").exists(),
+                "profile": (run_dir / "profile.jsonl").exists(),
                 "log": (run_dir / "train.log").exists(),
                 "model": (run_dir / "model.pt").exists(),
                 "run_state": (run_dir / "run_state.json").exists(),
@@ -191,6 +205,7 @@ class TrainingRunMonitor:
             path.stat().st_mtime
             for name in (
                 "metrics.jsonl",
+                "profile.jsonl",
                 "train.log",
                 "config.json",
                 "model.pt",
@@ -202,6 +217,17 @@ class TrainingRunMonitor:
             if (path := run_dir / name).exists()
         ]
         return max(mtimes) if mtimes else None
+
+    @staticmethod
+    def _run_type(stage: str, experiment_name: Any) -> str | None:
+        if stage != "federated_training":
+            return None
+        name = str(experiment_name or "")
+        if "global" in name:
+            return "global"
+        if "banks_" in name:
+            return "exclusive"
+        return "federated"
 
 
 def _nested_get(payload: dict[str, Any], *keys: str) -> Any:
