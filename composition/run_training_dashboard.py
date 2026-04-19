@@ -526,15 +526,14 @@ _INDEX_HTML = """<!doctype html>
         .map(row => ({
           epoch: Number(row.epoch),
           train: Number(row.train_loss),
-          val: Number(row.val_loss),
-          pr: Number(row.pr_auc ?? (row.metrics || {}).val_pr_auc)
+          val: Number(row.val_loss)
         }));
       if (!points.length) {
         svg.innerHTML = `<text x="${width / 2}" y="${height / 2}" text-anchor="middle" fill="#586069">Waiting for ${state.stage === "federated_training" ? "round" : "epoch"} metrics</text>`;
         return;
       }
       const epochs = points.map(p => p.epoch);
-      const values = points.flatMap(p => [p.train, p.val]).concat(points.filter(p => Number.isFinite(p.pr)).map(p => p.pr));
+      const values = points.flatMap(p => [p.train, p.val]);
       let minX = Math.min(...epochs), maxX = Math.max(...epochs);
       let minY = Math.min(...values), maxY = Math.max(...values);
       if (minX === maxX) maxX = minX + 1;
@@ -552,17 +551,14 @@ _INDEX_HTML = """<!doctype html>
         grid.push(`<text x="${left - 8}" y="${gy + 4}" text-anchor="end" font-size="12" fill="#586069">${fmt(label)}</text>`);
       }
       const progressLabel = state.stage === "federated_training" ? "Round" : "Epoch";
-      const prLine = line("pr");
       svg.innerHTML = `
         ${grid.join("")}
         <line x1="${left}" y1="${top}" x2="${left}" y2="${height - bottom}" stroke="#24292f"/>
         <line x1="${left}" y1="${height - bottom}" x2="${width - right}" y2="${height - bottom}" stroke="#24292f"/>
         <polyline points="${line("train")}" fill="none" stroke="#00897b" stroke-width="3"/>
         <polyline points="${line("val")}" fill="none" stroke="#c62828" stroke-width="3"/>
-        ${prLine ? `<polyline points="${prLine}" fill="none" stroke="#0969da" stroke-width="3"/>` : ""}
         <text x="${left}" y="18" fill="#00897b" font-size="13">Train loss</text>
         <text x="${left + 92}" y="18" fill="#c62828" font-size="13">Val loss</text>
-        ${prLine ? `<text x="${left + 170}" y="18" fill="#0969da" font-size="13">PR-AUC</text>` : ""}
         <text x="${width / 2}" y="${height - 12}" text-anchor="middle" fill="#586069" font-size="13">${progressLabel}</text>`;
     }
 
