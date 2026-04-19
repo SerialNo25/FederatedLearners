@@ -1,5 +1,0 @@
-experiment_name = "eval_local_bank3"
-output_dir = "data/experiments"
-model_path = "data/experiments/local_bank_3_tabnet/model.pt"
-dataset_path = "data/train_test_splits/bank_3_test.csv"
-classification_threshold = 0.5

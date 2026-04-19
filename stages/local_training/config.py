@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -12,6 +13,7 @@ from domain.models.model_config import ModelConfig, validate_model_config
 class LocalTrainingConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
+    stage: Literal["local_training"] = "local_training"
     experiment_name: str = "local_single_institution"
     output_dir: Path = Path("data/experiments")
     institution_id: str
@@ -19,7 +21,7 @@ class LocalTrainingConfig(BaseModel):
     local_epochs: int
     learning_rate: float
     fraud_weight: float = 100.0
-    batch_size: int = 256
+    batch_size: int = 4096
     classification_threshold: float = 0.5
     seed: int = 42
     model: ModelConfig

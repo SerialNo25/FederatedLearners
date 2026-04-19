@@ -30,6 +30,9 @@ class FederatedRoundReporter:
         local_parameter_delta_l2 = {
             update.institution_id: update.parameter_delta_l2 for update in updates
         }
+        evaluation_by_institution = {
+            evaluation.institution_id: evaluation for evaluation in evaluations
+        }
         eval_payload = {
             metric.institution_id: {
                 "loss": metric.loss,
@@ -47,6 +50,13 @@ class FederatedRoundReporter:
             "epoch": round_index,
             "train_loss": weighted_mean(list(local_loss.values()), list(local_num_samples.values())),
             "val_loss": sum(metric.loss for metric in evaluations) / len(evaluations),
+            "pr_auc": weighted_mean(
+                [
+                    evaluation_by_institution[institution_id].pr_auc
+                    for institution_id in local_num_samples
+                ],
+                [local_num_samples[institution_id] for institution_id in local_num_samples],
+            ),
             "metrics": {
                 "local_loss": local_loss,
                 "local_num_samples": local_num_samples,

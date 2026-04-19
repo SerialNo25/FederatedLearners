@@ -7,7 +7,7 @@ from pathlib import Path
 import tomli
 
 from domain.evaluation_service import EvaluationCheckpointLoader
-from domain.logging.experiment_logger import StageExperimentLogger
+from domain.logging.experiment_logger import StageExperimentLogger, allocate_experiment_run_dir
 from stages.ensemble.config import EnsembleConfig
 from stages.ensemble.stage import EnsembleStage
 
@@ -17,7 +17,7 @@ def run_ensemble(config_path: str | Path) -> Path:
     config_dict = tomli.loads(path.read_text(encoding="utf-8"))
     config = EnsembleConfig.from_dict(config_dict)
 
-    experiment_dir = config.output_dir / config.experiment_name
+    experiment_dir = allocate_experiment_run_dir(config.output_dir, config.experiment_name)
     experiment_logger = StageExperimentLogger(
         experiment_dir=str(experiment_dir),
         stage_name="ensemble",

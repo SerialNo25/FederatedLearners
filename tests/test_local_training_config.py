@@ -22,7 +22,7 @@ class LocalTrainingConfigTests(unittest.TestCase):
     def test_defaults_applied(self):
         config = LocalTrainingConfig.from_dict(_base_dict())
         self.assertEqual(config.fraud_weight, 100.0)
-        self.assertEqual(config.batch_size, 256)
+        self.assertEqual(config.batch_size, 4096)
         self.assertEqual(config.classification_threshold, 0.5)
         self.assertEqual(config.seed, 42)
 

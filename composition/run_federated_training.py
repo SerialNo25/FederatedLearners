@@ -6,7 +6,7 @@ from pathlib import Path
 
 import tomli
 
-from domain.logging.experiment_logger import StageExperimentLogger
+from domain.logging.experiment_logger import StageExperimentLogger, allocate_experiment_run_dir
 from domain.models.model_registry import MODEL_REGISTRY
 from stages.federated_training.config import FederatedTrainingConfig
 from stages.federated_training.stage import FederatedTrainingStage
@@ -28,15 +28,17 @@ def run_federated_training(config_path: str | Path) -> Path:
         institutions.append(LocalTrainingConfig.from_dict(ic_dict))
 
     config = FederatedTrainingConfig(
+        stage=fed_dict.get("stage", "federated_training"),
         experiment_name=fed_dict.get("experiment_name", "federated_global"),
         output_dir=fed_dict.get("output_dir", "data/experiments"),
         num_rounds=fed_dict["num_rounds"],
         proximal_mu=fed_dict.get("proximal_mu", 0.0),
+        local_training_overrides=fed_dict.get("local_training_overrides", {}),
         model=model_dict,
         institutions=institutions,
     )
 
-    experiment_dir = config.output_dir / config.experiment_name
+    experiment_dir = allocate_experiment_run_dir(config.output_dir, config.experiment_name)
     experiment_logger = StageExperimentLogger(
         experiment_dir=str(experiment_dir),
         stage_name="federated_training",

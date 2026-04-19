@@ -1,7 +1,0 @@
-model_type = "tabnet"
-decision_dim = 16
-attention_dim = 16
-steps = 4
-relaxation_factor = 1.5
-sparsity_weight = 0.0001
-# Device is auto-selected by priority: CUDA > MPS > CPU

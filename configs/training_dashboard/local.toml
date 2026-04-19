@@ -1,0 +1,6 @@
+stage = "training_dashboard"
+experiments_dir = "data/experiments"
+host = "127.0.0.1"
+port = 8050
+poll_interval_seconds = 1.0
+active_timeout_seconds = 120

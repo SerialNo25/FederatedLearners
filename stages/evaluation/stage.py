@@ -29,6 +29,7 @@ class EvaluationStage(Stage):
         self.evaluation_service = evaluation_service
 
     def execute(self) -> Path:
+        self._write_run_state("running")
         dataset = load_institution_dataset(
             institution_id="evaluation_dataset",
             csv_path=self.config.dataset_path,
@@ -85,4 +86,21 @@ class EvaluationStage(Stage):
                 "metrics": results["metrics"],
             },
         )
+        self._write_run_state("completed")
         return self.experiment_dir
+
+    def _write_run_state(self, status: str) -> None:
+        (self.experiment_dir / "run_state.json").write_text(
+            json.dumps(
+                {
+                    "stage": "evaluation",
+                    "status": status,
+                    "experiment_name": self.config.experiment_name,
+                    "run_id": self.experiment_dir.name,
+                    "run_dir": str(self.experiment_dir),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )

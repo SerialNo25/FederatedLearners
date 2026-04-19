@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -15,6 +16,7 @@ class InstitutionSplitConfig(BaseModel):
 class DatasetSplitConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
+    stage: Literal["dataset_split"] = "dataset_split"
     output_dir: Path = Path("train_test_splits")
     test_fraction: float = 0.2
     seed: int = 42

@@ -73,6 +73,40 @@ class FederatedTrainingConfigTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             FederatedTrainingConfig.model_validate(_base_fed_dict(num_rounds=0))
 
+    def test_local_training_overrides_are_validated_and_resolved(self):
+        config = FederatedTrainingConfig.model_validate(
+            _base_fed_dict(
+                local_training_overrides={
+                    "bank_1": {
+                        "local_epochs": 2,
+                        "learning_rate": 0.001,
+                        "fraud_weight": 20.0,
+                        "batch_size": 128,
+                        "classification_threshold": 0.4,
+                    },
+                }
+            )
+        )
+
+        institution = config.institutions[0]
+        self.assertEqual(config.local_epochs_for(institution), 2)
+        self.assertEqual(config.learning_rate_for(institution), 0.001)
+        self.assertEqual(config.fraud_weight_for(institution), 20.0)
+        self.assertEqual(config.batch_size_for(institution), 128)
+        self.assertEqual(config.classification_threshold_for(institution), 0.4)
+
+    def test_invalid_local_training_override_is_rejected(self):
+        with self.assertRaises(ValueError):
+            FederatedTrainingConfig.model_validate(
+                _base_fed_dict(local_training_overrides={"bank_1": {"learning_rate": 0.0}})
+            )
+
+    def test_unknown_local_training_override_institution_is_rejected(self):
+        with self.assertRaises(ValueError):
+            FederatedTrainingConfig.model_validate(
+                _base_fed_dict(local_training_overrides={"bank_2": {"learning_rate": 0.001}})
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

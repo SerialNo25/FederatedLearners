@@ -24,6 +24,7 @@ class EvaluationCheckpointLoader:
     """Loads model checkpoints produced by training stages."""
 
     def load(self, checkpoint_path: Path) -> LoadedCheckpoint:
+        checkpoint_path = self._resolve_checkpoint_path(checkpoint_path)
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
         if not isinstance(checkpoint, dict) or "parameters" not in checkpoint:
             raise ValueError(
@@ -43,6 +44,28 @@ class EvaluationCheckpointLoader:
             parameters=checkpoint["parameters"],
             model_config=model_config,
         )
+
+    @staticmethod
+    def _resolve_checkpoint_path(checkpoint_path: Path) -> Path:
+        if checkpoint_path.exists():
+            return checkpoint_path
+
+        if checkpoint_path.name != "model.pt":
+            return checkpoint_path
+
+        experiment_root = checkpoint_path.parent
+        if not experiment_root.exists() or not experiment_root.is_dir():
+            return checkpoint_path
+
+        candidate_paths = [
+            path / "model.pt"
+            for path in experiment_root.iterdir()
+            if path.is_dir() and path.name.startswith("run_") and (path / "model.pt").exists()
+        ]
+        if not candidate_paths:
+            return checkpoint_path
+
+        return max(candidate_paths, key=lambda path: path.parent.name)
 
 
 class ModelEvaluationService:

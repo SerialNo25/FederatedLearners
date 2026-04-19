@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -10,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 class EvaluationConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
+    stage: Literal["evaluation"] = "evaluation"
     experiment_name: str = "evaluation"
     output_dir: Path = Path("data/experiments")
     model_path: Path

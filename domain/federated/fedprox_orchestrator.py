@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from time import perf_counter
 
 import numpy as np
 
@@ -10,7 +11,7 @@ from domain.dataset.dataset_loader import InstitutionDataset
 from domain.federated.model_parameters import get_model_parameters
 from domain.models.federated_model_protocol import FederatedModelProtocol
 from domain.models.model_registry import ModelFactoryProtocol
-from domain.training.trainer import TrainingConfig, train_local_model
+from domain.training.trainer import TrainingConfig, TrainingEpochProfile, train_local_model
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,8 @@ class InstitutionUpdate:
     parameters: dict[str, list[float]]
     local_loss: float
     parameter_delta_l2: float
+    training_profile: list[dict[str, int | float]] = field(default_factory=list)
+    elapsed_seconds: float = 0.0
 
 
 class InstitutionNode:
@@ -40,8 +43,10 @@ class InstitutionNode:
         return self.dataset.institution_id
 
     def fit(self, global_parameters: dict[str, list[float]]) -> InstitutionUpdate:
+        fit_started = perf_counter()
         local_model = self.model_factory(len(self.dataset.features[0]))
         local_model.load_parameters(global_parameters)
+        profiles: list[TrainingEpochProfile] = []
 
         local_loss = train_local_model(
             model=local_model,
@@ -49,6 +54,7 @@ class InstitutionNode:
             labels=self.dataset.labels,
             config=self.training_config,
             global_parameters=global_parameters,
+            on_epoch_profile=profiles.append,
         )
         local_parameters = get_model_parameters(local_model)
         parameter_delta_l2 = self._parameter_delta_l2(local_parameters, global_parameters)
@@ -59,6 +65,8 @@ class InstitutionNode:
             parameters=local_parameters,
             local_loss=local_loss,
             parameter_delta_l2=parameter_delta_l2,
+            training_profile=[profile.to_dict() for profile in profiles],
+            elapsed_seconds=perf_counter() - fit_started,
         )
 
     @staticmethod

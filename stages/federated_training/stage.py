@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 from tqdm import tqdm
 
 from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
@@ -14,12 +15,17 @@ from domain.federated.fedprox_orchestrator import (
 )
 from domain.federated.model_artifact_writer import ModelArtifactWriter
 from domain.logging.experiment_logger import StageExperimentLogger
+from domain.logging.loss_plot_writer import LossPlotWriter
+from domain.logging.pr_auc_plot_writer import PRAUCPlotWriter
 from domain.metrics.evaluation import evaluate_institution
 from domain.models.federated_model_protocol import FederatedModelProtocol
 from domain.models.model_registry import ModelFactoryProtocol
 from domain.training.trainer import TrainingConfig
 from stages.federated_training.config import FederatedTrainingConfig
-from stages.federated_training.round_reporter import FederatedRoundReporter
+from stages.federated_training.round_reporter import (
+    FederatedRoundReport,
+    FederatedRoundReporter,
+)
 from stages.stage import Stage
 
 
@@ -39,14 +45,17 @@ class FederatedTrainingStage(Stage):
         self.round_reporter = round_reporter or FederatedRoundReporter()
 
     def execute(self) -> Path:
+        self._write_run_state("running")
         datasets = self._load_datasets()
         self._assert_dataset_invariants(datasets)
 
         orchestrator, institutions = self._build_orchestrator(datasets)
 
         self._log_experiment_start(institutions)
-        self._run_training_rounds(orchestrator, datasets)
+        round_reports = self._run_training_rounds(orchestrator, datasets)
         self._persist_artifacts(self.experiment_dir, orchestrator.global_model)
+        self._write_training_plots(round_reports)
+        self._write_run_state("completed")
         return self.experiment_dir
 
     def _build_orchestrator(
@@ -62,11 +71,11 @@ class FederatedTrainingStage(Stage):
             InstitutionNode(
                 dataset=dataset,
                 training_config=TrainingConfig(
-                    learning_rate=inst_config.learning_rate,
-                    local_epochs=inst_config.local_epochs,
+                    learning_rate=self.config.learning_rate_for(inst_config),
+                    local_epochs=self.config.local_epochs_for(inst_config),
                     proximal_mu=self.config.proximal_mu,
-                    fraud_weight=inst_config.fraud_weight,
-                    batch_size=inst_config.batch_size,
+                    fraud_weight=self.config.fraud_weight_for(inst_config),
+                    batch_size=self.config.batch_size_for(inst_config),
                     seed=inst_config.seed,
                 ),
                 model_factory=self.model_factory,
@@ -96,18 +105,25 @@ class FederatedTrainingStage(Stage):
         self,
         orchestrator: FedProxOrchestrator,
         datasets: list[InstitutionDataset],
-    ) -> None:
+    ) -> list[FederatedRoundReport]:
+        round_reports: list[FederatedRoundReport] = []
         for round_index in tqdm(range(1, self.config.num_rounds + 1), "federated rounds"):
+            round_started = perf_counter()
+            fit_started = perf_counter()
             updates = orchestrator.run_round()
+            fit_seconds = perf_counter() - fit_started
+            evaluation_started = perf_counter()
             evaluations = [
                 evaluate_institution(
                     orchestrator.global_model,
                     dataset,
-                    pos_weight=inst_config.fraud_weight,
-                    threshold=inst_config.classification_threshold,
+                    pos_weight=self.config.fraud_weight_for(inst_config),
+                    threshold=self.config.classification_threshold_for(inst_config),
                 )
                 for inst_config, dataset in zip(self.config.institutions, datasets)
             ]
+            evaluation_seconds = perf_counter() - evaluation_started
+            reporting_started = perf_counter()
             round_report = self.round_reporter.build_report(
                 round_index=round_index,
                 updates=updates,
@@ -120,6 +136,35 @@ class FederatedTrainingStage(Stage):
             for line in round_report.institution_lines:
                 self.experiment_logger.info(line)
             self.experiment_logger.info(round_report.summary_line)
+            round_reports.append(round_report)
+            reporting_seconds = perf_counter() - reporting_started
+            self.experiment_logger.write_profile(
+                step=f"round_{round_index}",
+                values={
+                    "epoch": round_index,
+                    "round_seconds": perf_counter() - round_started,
+                    "fit_seconds": fit_seconds,
+                    "evaluation_seconds": evaluation_seconds,
+                    "reporting_seconds": reporting_seconds,
+                    "client_fit_seconds": {
+                        update.institution_id: update.elapsed_seconds for update in updates
+                    },
+                    "client_training_profile": {
+                        update.institution_id: update.training_profile for update in updates
+                    },
+                    "evaluation_samples": {
+                        dataset.institution_id: len(dataset.labels) for dataset in datasets
+                    },
+                },
+            )
+            self.experiment_logger.info(
+                "federated_training_profile "
+                f"round={round_index}/{self.config.num_rounds} "
+                f"fit_seconds={fit_seconds:.6f} "
+                f"evaluation_seconds={evaluation_seconds:.6f} "
+                f"reporting_seconds={reporting_seconds:.6f}"
+            )
+        return round_reports
 
     def _load_datasets(self) -> list[InstitutionDataset]:
         return [
@@ -149,4 +194,41 @@ class FederatedTrainingStage(Stage):
             model_type=self.config.model.model_type,
             model=model,
             model_config=self.config.model.model_dump(mode="python"),
+        )
+
+    def _write_training_plots(self, round_reports: list[FederatedRoundReport]) -> None:
+        if not round_reports:
+            return
+
+        rounds = [int(report.metrics_payload["epoch"]) for report in round_reports]
+        train_losses = [float(report.metrics_payload["train_loss"]) for report in round_reports]
+        val_losses = [float(report.metrics_payload["val_loss"]) for report in round_reports]
+        pr_auc_values = [float(report.metrics_payload["pr_auc"]) for report in round_reports]
+
+        LossPlotWriter.write(
+            output_path=self.experiment_dir / "loss_plot.svg",
+            rounds=rounds,
+            train_losses=train_losses,
+            val_losses=val_losses,
+        )
+        PRAUCPlotWriter.write(
+            output_path=self.experiment_dir / "pr_auc_plot.svg",
+            rounds=rounds,
+            pr_auc_values=pr_auc_values,
+        )
+
+    def _write_run_state(self, status: str) -> None:
+        (self.experiment_dir / "run_state.json").write_text(
+            json.dumps(
+                {
+                    "stage": "federated_training",
+                    "status": status,
+                    "experiment_name": self.config.experiment_name,
+                    "run_id": self.experiment_dir.name,
+                    "run_dir": str(self.experiment_dir),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
         )

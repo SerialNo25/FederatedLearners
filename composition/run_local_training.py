@@ -6,7 +6,7 @@ from pathlib import Path
 
 import tomli
 
-from domain.logging.experiment_logger import StageExperimentLogger
+from domain.logging.experiment_logger import StageExperimentLogger, allocate_experiment_run_dir
 from domain.models.model_registry import MODEL_REGISTRY
 from stages.local_training.config import LocalTrainingConfig
 from stages.local_training.stage import LocalTrainingStage
@@ -21,7 +21,7 @@ def run_local_training(config_path: str | Path) -> Path:
 
     config = LocalTrainingConfig.from_dict(config_dict)
 
-    experiment_dir = config.output_dir / config.experiment_name
+    experiment_dir = allocate_experiment_run_dir(config.output_dir, config.experiment_name)
     experiment_logger = StageExperimentLogger(
         experiment_dir=str(experiment_dir),
         stage_name="local_training",
