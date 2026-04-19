@@ -96,6 +96,45 @@ See stage documentation:
 
 - `docs/hyperparameter_optimization_stage.md`
 
+## Run federated hyperparameter optimization
+
+```bash
+python main.py --config configs/federated_hyperparameter_optimization/global.toml
+python main.py --config configs/federated_hyperparameter_optimization/banks_1_2.toml
+python main.py --config configs/federated_hyperparameter_optimization/banks_1_3.toml
+python main.py --config configs/federated_hyperparameter_optimization/banks_2_3.toml
+```
+
+Helper scripts:
+
+```bash
+./scripts/run_federated_hyperparameter_optimization.sh
+./scripts/run_federated_hyperparameter_optimization_banks_1_2.sh
+./scripts/run_federated_hyperparameter_optimization_banks_1_3.sh
+./scripts/run_federated_hyperparameter_optimization_banks_2_3.sh
+```
+
+The exclusive `banks_x_y` studies write separate Optuna databases and experiment results:
+
+```text
+data/experiments/hpo_federated_banks_1_2_tabnet/optuna.db
+data/experiments/hpo_federated_banks_1_3_tabnet/optuna.db
+data/experiments/hpo_federated_banks_2_3_tabnet/optuna.db
+```
+
+Open the Optuna dashboard with:
+
+```bash
+optuna-dashboard sqlite:///data/experiments/hpo_federated_global_tabnet/optuna.db
+optuna-dashboard sqlite:///data/experiments/hpo_federated_banks_1_2_tabnet/optuna.db
+optuna-dashboard sqlite:///data/experiments/hpo_federated_banks_1_3_tabnet/optuna.db
+optuna-dashboard sqlite:///data/experiments/hpo_federated_banks_2_3_tabnet/optuna.db
+```
+
+See stage documentation:
+
+- `docs/federated_hyperparameter_optimization_stage.md`
+
 ## Run evaluation
 
 ```bash

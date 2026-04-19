@@ -1,8 +1,12 @@
 import unittest
+from pathlib import Path
+
+import tomli
 
 from stages.federated_hyperparameter_optimization.config import (
     FederatedHyperparameterOptimizationConfig,
 )
+from stages.local_training.config import LocalTrainingConfig
 
 
 def _institution_dict(institution_id: str) -> dict:
@@ -74,6 +78,62 @@ class FederatedHyperparameterOptimizationConfigTests(unittest.TestCase):
             FederatedHyperparameterOptimizationConfig.from_dict(
                 _base_dict(objective_metric="val_loss", direction="maximize")
             )
+
+    def test_exclusive_combo_configs_have_separate_studies_and_results(self):
+        expected = {
+            "banks_1_2": ["bank_1", "bank_2"],
+            "banks_1_3": ["bank_1", "bank_3"],
+            "banks_2_3": ["bank_2", "bank_3"],
+        }
+        seen_storage_urls: set[str] = set()
+        seen_experiment_names: set[str] = set()
+
+        for combo, institution_ids in expected.items():
+            config = _load_repo_config(
+                Path("configs/federated_hyperparameter_optimization") / f"{combo}.toml"
+            )
+
+            self.assertEqual(config.stage, "federated_hyperparameter_optimization")
+            self.assertEqual(
+                config.experiment_name,
+                f"hpo_federated_{combo}_tabnet",
+            )
+            self.assertEqual(config.study_name, f"hpo_federated_{combo}_tabnet")
+            self.assertEqual(
+                config.storage_url,
+                f"sqlite:///data/experiments/hpo_federated_{combo}_tabnet/optuna.db",
+            )
+            self.assertEqual(
+                [institution.institution_id for institution in config.institutions],
+                institution_ids,
+            )
+            self.assertEqual(
+                set(config.local_training_overrides),
+                set(institution_ids),
+            )
+            self.assertIsNotNone(config.search_space.federated.proximal_mu)
+            self.assertIsNotNone(config.search_space.federated.num_rounds)
+            seen_storage_urls.add(config.storage_url or "")
+            seen_experiment_names.add(config.experiment_name)
+
+        self.assertEqual(len(seen_storage_urls), 3)
+        self.assertEqual(len(seen_experiment_names), 3)
+
+
+def _load_repo_config(path: Path) -> FederatedHyperparameterOptimizationConfig:
+    config_dict = tomli.loads(path.read_text(encoding="utf-8"))
+    model_dict = tomli.loads(Path(config_dict.pop("model_config")).read_text(encoding="utf-8"))
+    institution_config_paths = config_dict.pop("institution_configs")
+    institutions = []
+    for institution_config_path in institution_config_paths:
+        institution_dict = tomli.loads(Path(institution_config_path).read_text(encoding="utf-8"))
+        institution_dict.pop("model_config", None)
+        institution_dict["model"] = model_dict
+        institutions.append(LocalTrainingConfig.from_dict(institution_dict))
+
+    config_dict["model"] = model_dict
+    config_dict["institutions"] = institutions
+    return FederatedHyperparameterOptimizationConfig.from_dict(config_dict)
 
 
 if __name__ == "__main__":

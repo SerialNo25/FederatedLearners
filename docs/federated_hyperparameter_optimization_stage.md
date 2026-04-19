@@ -22,7 +22,7 @@ configs remain the source of institution IDs, datasets, seeds, and fallback valu
 keyed by institution id, and Optuna samples local override parameters separately for each
 institution.
 
-## Run
+## Run Inclusive Global Optimization
 
 ```bash
 python main.py --config configs/federated_hyperparameter_optimization/global.toml
@@ -40,10 +40,33 @@ Helper script:
 ./scripts/run_federated_hyperparameter_optimization.sh
 ```
 
+## Run Exclusive Optimization
+
+Exclusive federated studies use the same Optuna stage and the same `banks_x_y` naming convention as
+exclusive federated training. Each combination has its own TOML config, study name, storage database,
+and output experiment directory:
+
+```bash
+python main.py --config configs/federated_hyperparameter_optimization/banks_1_2.toml
+python main.py --config configs/federated_hyperparameter_optimization/banks_1_3.toml
+python main.py --config configs/federated_hyperparameter_optimization/banks_2_3.toml
+```
+
+Helper scripts:
+
+```bash
+./scripts/run_federated_hyperparameter_optimization_banks_1_2.sh
+./scripts/run_federated_hyperparameter_optimization_banks_1_3.sh
+./scripts/run_federated_hyperparameter_optimization_banks_2_3.sh
+```
+
 Open the Optuna dashboard with:
 
 ```bash
 optuna-dashboard sqlite:///data/experiments/hpo_federated_global_tabnet/optuna.db
+optuna-dashboard sqlite:///data/experiments/hpo_federated_banks_1_2_tabnet/optuna.db
+optuna-dashboard sqlite:///data/experiments/hpo_federated_banks_1_3_tabnet/optuna.db
+optuna-dashboard sqlite:///data/experiments/hpo_federated_banks_2_3_tabnet/optuna.db
 ```
 
 ## Configuration
@@ -55,6 +78,10 @@ The config follows the local Optuna stage structure:
 - `institution_configs` pointing to the existing local-training TOML files
 - `local_training_overrides.<institution_id>` defaults for federated client-local values
 - `search_space` sections for sampled parameters
+
+Exclusive configs contain only the two included institutions. For example, `banks_1_2.toml` samples
+and trains with `bank_1` and `bank_2`, writing results under
+`data/experiments/hpo_federated_banks_1_2_tabnet/`.
 
 Example defaults:
 

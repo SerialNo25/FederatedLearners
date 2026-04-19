@@ -1,0 +1,82 @@
+stage = "federated_hyperparameter_optimization"
+experiment_name = "hpo_federated_banks_1_3_tabnet"
+output_dir = "data/experiments"
+model_config = "configs/shared/model.toml"
+
+n_trials = 30
+study_name = "hpo_federated_banks_1_3_tabnet"
+storage_url = "sqlite:///data/experiments/hpo_federated_banks_1_3_tabnet/optuna.db"
+load_if_exists = true
+objective_metric = "val_pr_auc"
+direction = "maximize"
+seed = 42
+
+num_rounds = 5
+proximal_mu = 0.03
+
+institution_configs = [
+    "configs/local_training/bank_1.toml",
+    "configs/local_training/bank_3.toml",
+]
+
+[local_training_overrides.bank_1]
+local_epochs = 6
+learning_rate = 0.003
+fraud_weight = 8
+batch_size = 1024
+classification_threshold = 0.5
+
+[local_training_overrides.bank_3]
+local_epochs = 9
+learning_rate = 0.01
+fraud_weight = 13
+batch_size = 1024
+classification_threshold = 0.5
+
+[search_space.federated.proximal_mu]
+low = 0.0
+high = 0.1
+
+[search_space.federated.num_rounds]
+low = 2
+high = 8
+step = 1
+
+[search_space.local_training.learning_rate]
+low = 0.00001
+high = 0.01
+log = true
+
+#[search_space.local_training.fraud_weight]
+#low = 5
+#high = 100
+#log = true
+
+[search_space.local_training.local_epochs]
+low = 1
+high = 10
+step = 1
+
+#[search_space.local_training.batch_size]
+#choices = [512, 1024, 2048, 4096]
+
+#[search_space.local_training.classification_threshold]
+#low = 0.1
+#high = 0.9
+
+#[search_space.tabnet.attention_dim]
+#choices = [8, 16, 32]
+
+#[search_space.tabnet.steps]
+#low = 2
+#high = 8
+#step = 1
+#
+#[search_space.tabnet.relaxation_factor]
+#low = 1.1
+#high = 2.0
+#
+#[search_space.tabnet.sparsity_weight]
+#low = 0.00001
+#high = 0.001
+#log = true
