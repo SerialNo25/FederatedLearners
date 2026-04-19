@@ -33,11 +33,32 @@ Each runnable config includes `stage = "federated_training"` and exposes:
 - `model_config`
 - `num_rounds`
 - `proximal_mu`
+- `local_training_overrides`
 - `institution_configs`
 
 Institution configs are local-training TOML files under `configs/local_training/`.
 The shared model config is `configs/shared/model.toml`, whose `model_type` must match a registered model in `domain/models/model_registry.py`.
 - Device is auto-selected at runtime by priority: `cuda > mps > cpu`
+
+`local_training_overrides` is optional and keyed by institution id. It applies only inside
+federated training and lets each federated client use different local parameters from standalone
+local training without duplicating bank config files:
+
+```toml
+[local_training_overrides.bank_1]
+local_epochs = 3
+learning_rate = 0.001
+fraud_weight = 20
+batch_size = 1024
+classification_threshold = 0.5
+
+[local_training_overrides.bank_2]
+local_epochs = 2
+learning_rate = 0.0005
+```
+
+Any omitted institution or field falls back to the referenced local-training config for that
+institution. Unknown institution ids are rejected during config validation.
 
 ## Input Data Requirements
 Each institution CSV must follow this exact schema and order:

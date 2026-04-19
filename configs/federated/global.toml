@@ -11,3 +11,11 @@ institution_configs = [
     "configs/local_training/bank_2.toml",
     "configs/local_training/bank_3.toml",
 ]
+
+# Optional: override local-training TOML values only when running federated training.
+# [local_training_overrides.bank_1]
+# local_epochs = 3
+# learning_rate = 0.001
+# fraud_weight = 20
+# batch_size = 1024
+# classification_threshold = 0.5

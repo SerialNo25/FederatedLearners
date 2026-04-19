@@ -71,11 +71,11 @@ class FederatedTrainingStage(Stage):
             InstitutionNode(
                 dataset=dataset,
                 training_config=TrainingConfig(
-                    learning_rate=inst_config.learning_rate,
-                    local_epochs=inst_config.local_epochs,
+                    learning_rate=self.config.learning_rate_for(inst_config),
+                    local_epochs=self.config.local_epochs_for(inst_config),
                     proximal_mu=self.config.proximal_mu,
-                    fraud_weight=inst_config.fraud_weight,
-                    batch_size=inst_config.batch_size,
+                    fraud_weight=self.config.fraud_weight_for(inst_config),
+                    batch_size=self.config.batch_size_for(inst_config),
                     seed=inst_config.seed,
                 ),
                 model_factory=self.model_factory,
@@ -117,8 +117,8 @@ class FederatedTrainingStage(Stage):
                 evaluate_institution(
                     orchestrator.global_model,
                     dataset,
-                    pos_weight=inst_config.fraud_weight,
-                    threshold=inst_config.classification_threshold,
+                    pos_weight=self.config.fraud_weight_for(inst_config),
+                    threshold=self.config.classification_threshold_for(inst_config),
                 )
                 for inst_config, dataset in zip(self.config.institutions, datasets)
             ]

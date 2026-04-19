@@ -33,6 +33,7 @@ def run_federated_training(config_path: str | Path) -> Path:
         output_dir=fed_dict.get("output_dir", "data/experiments"),
         num_rounds=fed_dict["num_rounds"],
         proximal_mu=fed_dict.get("proximal_mu", 0.0),
+        local_training_overrides=fed_dict.get("local_training_overrides", {}),
         model=model_dict,
         institutions=institutions,
     )
