@@ -10,3 +10,17 @@ institution_configs = [
     "configs/local_training/bank_2.toml",
     "configs/local_training/bank_3.toml",
 ]
+
+[local_training_overrides.bank_2]
+local_epochs = 9
+learning_rate = 0.006
+fraud_weight = 14
+batch_size = 1024
+classification_threshold = 0.5
+
+[local_training_overrides.bank_3]
+local_epochs = 9
+learning_rate = 0.01
+fraud_weight = 13
+batch_size = 1024
+classification_threshold = 0.5
