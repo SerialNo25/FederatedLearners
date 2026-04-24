@@ -3,7 +3,7 @@ experiment_name = "hpo_ensemble_inclusive_bank_3"
 output_dir = "data/experiments"
 
 institution_id = "bank_3"
-dataset_path = "data/train_test_splits/bank_3_train.csv"
+dataset_path = "data/mixed_datasets/bank_3_dominant_80_10_10.csv"
 
 n_trials = 100
 study_name = "hpo_ensemble_inclusive_bank_3"
