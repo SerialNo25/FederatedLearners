@@ -4,7 +4,7 @@ output_dir = "data/experiments"
 model_config = "configs/shared/model.toml"
 
 num_rounds = 20
-proximal_mu = 0.01
+proximal_mu = 0.004
 
 institution_configs = [
     "configs/local_training/bank_1.toml",
@@ -14,22 +14,22 @@ institution_configs = [
 
 # Optional: override local-training TOML values only when running federated training.
 [local_training_overrides.bank_1]
-local_epochs = 6
-learning_rate = 0.003
-fraud_weight = 8
-batch_size = 1024
+local_epochs = 3
+learning_rate = 0.008
+fraud_weight = 14
+batch_size = 4096
 classification_threshold = 0.5
 
 [local_training_overrides.bank_2]
-local_epochs = 9
+local_epochs = 4
 learning_rate = 0.006
-fraud_weight = 14
-batch_size = 1024
+fraud_weight = 10
+batch_size = 2048
 classification_threshold = 0.5
 
 [local_training_overrides.bank_3]
-local_epochs = 9
-learning_rate = 0.01
-fraud_weight = 13
-batch_size = 1024
+local_epochs = 10
+learning_rate = 0.008
+fraud_weight = 10
+batch_size = 4096
 classification_threshold = 0.5

@@ -242,6 +242,8 @@ class RawDataHarmonizationService:
         with source.raw_path.open("r", newline="", encoding="utf-8-sig") as handle:
             reader = csv.DictReader(handle)
             for row_index, row in enumerate(reader):
+                if self._row_has_missing_entries(row):
+                    continue
                 amount = self._extract_amount(source.bank_kind, row)
                 geo = self._extract_geo_value(source.bank_kind, row)
 
@@ -285,6 +287,8 @@ class RawDataHarmonizationService:
         with source.raw_path.open("r", newline="", encoding="utf-8-sig") as handle:
             reader = csv.DictReader(handle)
             for row_index, row in enumerate(reader):
+                if self._row_has_missing_entries(row):
+                    continue
                 country = ""
                 if source.bank_kind == "ccfraud":
                     country = self._clean_string(row.get("Country of Transaction", ""))
@@ -382,6 +386,8 @@ class RawDataHarmonizationService:
                 writer.writeheader()
 
                 for row_index, row in enumerate(reader):
+                    if self._row_has_missing_entries(row):
+                        continue
                     if (
                         stats.selected_row_indices is not None
                         and row_index not in stats.selected_row_indices
@@ -412,6 +418,8 @@ class RawDataHarmonizationService:
                 writer.writeheader()
 
                 for row_index, row in enumerate(reader):
+                    if self._row_has_missing_entries(row):
+                        continue
                     if row_index not in selected_indices:
                         continue
 
@@ -720,6 +728,9 @@ class RawDataHarmonizationService:
 
     def _clip01(self, value: float) -> float:
         return max(0.0, min(1.0, float(value)))
+
+    def _row_has_missing_entries(self, row: dict[str, str | None]) -> bool:
+        return any(self._clean_string(value or "") == "" for value in row.values())
 
     def _safe_float(self, value: str | None, default: float = 0.0) -> float:
         cleaned = self._clean_string(value or "")

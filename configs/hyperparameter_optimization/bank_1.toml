@@ -7,7 +7,7 @@ institution_id = "bank_1"
 dataset_path = "data/train_test_splits/bank_1_train.csv"
 
 n_trials = 100
-study_name = "hpo_local_bank_1_tabnet_thirdBaseline"
+study_name = "hpo_local_bank_1_tabnet"
 storage_url = "sqlite:///data/experiments/hpo_local_bank_1_tabnet/optuna.db"
 load_if_exists = true
 validation_fraction = 0.2
@@ -15,7 +15,7 @@ objective_metric = "val_pr_auc"
 direction = "maximize"
 seed = 42
 
-local_epochs = 20
+local_epochs = 5
 learning_rate = 0.01
 fraud_weight = 10
 batch_size = 1024
@@ -28,7 +28,7 @@ log = true
 
 [search_space.training.fraud_weight]
 low = 5
-high = 100
+high = 1000
 log = true
 
 [search_space.training.batch_size]

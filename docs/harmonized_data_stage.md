@@ -37,6 +37,7 @@ Each output CSV is validated against the shared dataset schema in `domain/datase
 
 - Sparkov is subsampled to `sparkov_target_size` while preserving the observed fraud ratio.
 - Raw rows are stratified into train/test subsets before harmonization.
+- Raw rows with any missing source-field values are dropped before split statistics are fit or CSV outputs are written.
 - Amount z-score, amount percentile, geo, and country-mapping statistics are fit from the train subset only and reused for the test subset.
 - `*_preprocessing.json` records the fitted preprocessing policy and train-only summary statistics for reproducibility.
 - Category mappings and engineered time/geo features follow the harmonization specification in `configs/harmonized_data/data_sources.txt`.

@@ -15,7 +15,7 @@ objective_metric = "val_pr_auc"
 direction = "maximize"
 seed = 42
 
-local_epochs = 20
+local_epochs = 5
 learning_rate = 0.02
 fraud_weight = 10
 batch_size = 1024
@@ -28,7 +28,7 @@ log = true
 
 [search_space.training.fraud_weight]
 low = 5
-high = 100
+high = 200
 log = true
 
 [search_space.training.batch_size]

@@ -22,31 +22,31 @@ path = "data/train_test_splits/bank_3_test.csv"
 [[local_models]]
 model_id = "local_bank_1"
 base_path = "data/experiments/local_bank_1_tabnet"
-run_number = 28
+run_number = 5
 
 [[local_models]]
 model_id = "local_bank_2"
 base_path = "data/experiments/local_bank_2_banksim"
-run_number = 3
+run_number = 5
 
 [[local_models]]
 model_id = "local_bank_3"
 base_path = "data/experiments/local_bank_3_ccfraud"
-run_number = 7
+run_number = 3
 
 
 
 [global_federated_model]
 model_id = "federated_global"
 base_path = "data/experiments/federated_global"
-run_number = 16
+run_number = 1
 
 
 
 [[exclusive_federated_models]]
 model_id = "federated_exclusive_bank_3"
 base_path = "data/experiments/federated_banks_1_2"
-run_number = 3
+run_number = 1
 
 [[exclusive_federated_models]]
 model_id = "federated_exclusive_bank_2"
@@ -56,7 +56,7 @@ run_number = 3
 [[exclusive_federated_models]]
 model_id = "federated_exclusive_bank_1"
 base_path = "data/experiments/federated_banks_2_3"
-run_number = 1
+run_number = 3
 
 
 

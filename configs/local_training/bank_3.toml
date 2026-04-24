@@ -6,9 +6,9 @@ model_config = "configs/shared/model.toml"
 institution_id = "bank_3"
 dataset_path = "data/train_test_splits/bank_3_train.csv"
 
-local_epochs = 14
+local_epochs = 15
 learning_rate = 0.005
-fraud_weight = 13
-batch_size = 512
+fraud_weight = 2.8
+batch_size = 2048
 classification_threshold = 0.5
 seed = 42

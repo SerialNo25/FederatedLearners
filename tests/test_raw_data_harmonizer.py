@@ -46,12 +46,51 @@ class RawDataHarmonizerTests(unittest.TestCase):
             )
             self.assertEqual(artifact["fit_subset"], "train")
 
+    def test_split_harmonization_drops_rows_with_missing_entries(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workdir = Path(tmpdir)
+            raw_path = workdir / "banksim_missing.csv"
+            self._write_banksim_fixture_with_missing_row(raw_path)
+
+            summary = RawDataHarmonizationService(seed=7).harmonize_train_test_split(
+                source=RawDatasetSource(
+                    institution_id="bank_2",
+                    bank_kind="banksim",
+                    raw_path=raw_path,
+                    output_filename="unused.csv",
+                ),
+                output_dir=workdir / "out",
+                test_fraction=0.5,
+            )
+
+            train_amounts = self._read_amounts(summary.train.output_path)
+            test_amounts = self._read_amounts(summary.test.output_path)
+            all_amounts = train_amounts + test_amounts
+
+            self.assertEqual(summary.train.row_count, 2)
+            self.assertEqual(summary.test.row_count, 2)
+            self.assertEqual(len(all_amounts), 4)
+            self.assertNotIn(20.0, all_amounts)
+
     def _write_banksim_fixture(self, path: Path) -> None:
         rows = [
             {"step": "0", "amount": "10", "age": "2", "zipcodeOri": "es_1", "zipMerchant": "es_2", "gender": "M", "category": "es_food", "fraud": "0"},
             {"step": "1", "amount": "20", "age": "3", "zipcodeOri": "es_1", "zipMerchant": "es_3", "gender": "F", "category": "es_fashion", "fraud": "0"},
             {"step": "2", "amount": "100", "age": "4", "zipcodeOri": "es_1", "zipMerchant": "es_4", "gender": "M", "category": "es_health", "fraud": "1"},
             {"step": "3", "amount": "200", "age": "5", "zipcodeOri": "es_1", "zipMerchant": "es_5", "gender": "F", "category": "es_travel", "fraud": "1"},
+        ]
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+            writer.writeheader()
+            writer.writerows(rows)
+
+    def _write_banksim_fixture_with_missing_row(self, path: Path) -> None:
+        rows = [
+            {"step": "0", "amount": "10", "age": "2", "zipcodeOri": "es_1", "zipMerchant": "es_2", "gender": "M", "category": "es_food", "fraud": "0"},
+            {"step": "1", "amount": "20", "age": "", "zipcodeOri": "es_1", "zipMerchant": "es_3", "gender": "F", "category": "es_fashion", "fraud": "0"},
+            {"step": "2", "amount": "100", "age": "4", "zipcodeOri": "es_1", "zipMerchant": "es_4", "gender": "M", "category": "es_health", "fraud": "1"},
+            {"step": "3", "amount": "200", "age": "5", "zipcodeOri": "es_1", "zipMerchant": "es_5", "gender": "F", "category": "es_travel", "fraud": "1"},
+            {"step": "4", "amount": "300", "age": "6", "zipcodeOri": "es_1", "zipMerchant": "es_6", "gender": "M", "category": "es_home", "fraud": "0"},
         ]
         with path.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(handle, fieldnames=list(rows[0]))

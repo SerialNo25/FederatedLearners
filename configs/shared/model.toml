@@ -1,8 +1,8 @@
 model_type = "tabnet"
 decision_dim = 16
-attention_dim = 32
-steps = 4
-relaxation_factor = 1.3
+attention_dim = 16
+steps = 3
+relaxation_factor = 1.6
 sparsity_weight = 0.0001
 # Device is auto-selected by priority: CUDA > MPS > CPU
 
@@ -23,3 +23,22 @@ sparsity_weight = 0.0001
 # 1.1-1.4 relaxation
 # sparsity 0.0001
 # steps 2-10
+
+# TRIAL 2
+# Bank 1:
+# 16 attension
+# 1.2-1.5 relaxation
+# sparsity 0.0001
+# steps 27
+
+# Bank 2:
+# 8 attension
+# 1.2-1.5 relaxation
+# sparsity 0.0001
+# steps 2-4
+
+# Bank 3:
+# 32 attension
+# 1.1-1.4 relaxation
+# sparsity 0.0001
+# steps 3
