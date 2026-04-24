@@ -35,7 +35,7 @@ classification_threshold = 0.5
 
 [search_space.federated.proximal_mu]
 low = 0.0
-high = 0.1
+high = 0.9
 
 [search_space.federated.num_rounds]
 low = 2
@@ -47,10 +47,10 @@ low = 0.00001
 high = 0.01
 log = true
 
-#[search_space.local_training.fraud_weight]
-#low = 5
-#high = 100
-#log = true
+[search_space.local_training.fraud_weight]
+low = 5
+high = 100
+log = true
 
 [search_space.local_training.local_epochs]
 low = 1
