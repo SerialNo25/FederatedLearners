@@ -1,0 +1,30 @@
+stage = "ensemble_weight_optimization"
+experiment_name = "hpo_ensemble_inclusive_bank_3"
+output_dir = "data/experiments"
+
+institution_id = "bank_3"
+dataset_path = "data/train_test_splits/bank_3_train.csv"
+
+n_trials = 100
+study_name = "hpo_ensemble_inclusive_bank_3"
+storage_url = "sqlite:///data/experiments/hpo_ensemble_inclusive_bank_3/optuna.db"
+load_if_exists = true
+objective_metric = "val_pr_auc"
+direction = "maximize"
+seed = 42
+classification_threshold = 0.5
+
+[local_model]
+model_id = "local_bank_3"
+base_path = "data/experiments/local_bank_3_ccfraud"
+run_number = 7
+
+[federated_model]
+model_id = "federated_global"
+base_path = "data/experiments/federated_global"
+run_number = 16
+
+[search_space.ensemble_weight]
+low = 0.0
+high = 1.0
+step = 0.01
