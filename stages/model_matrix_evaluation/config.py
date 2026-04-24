@@ -52,14 +52,7 @@ class EnsembleRunRef(BaseModel):
     model_id: str
     local_model_id: str
     federated_model_id: str
-    ensemble_weight: float | None = None
-
-    @field_validator("ensemble_weight")
-    @classmethod
-    def _validate_optional_ensemble_weight(cls, value: float | None) -> float | None:
-        if value is not None and not 0.0 <= value <= 1.0:
-            raise ValueError("ensemble_weight must be between 0 and 1 (inclusive)")
-        return value
+    config_path: Path
 
 
 class ModelMatrixConfig(BaseModel):
@@ -69,7 +62,6 @@ class ModelMatrixConfig(BaseModel):
     experiment_name: str = "model_matrix_evaluation"
     output_dir: Path = Path("data/experiments")
     classification_threshold: float = 0.5
-    ensemble_weight: float = 0.5
     datasets: list[DatasetRef]
     local_models: list[CheckpointRunRef]
     global_federated_model: CheckpointRunRef
@@ -82,13 +74,6 @@ class ModelMatrixConfig(BaseModel):
     def _validate_classification_threshold(cls, value: float) -> float:
         if not 0.0 < value < 1.0:
             raise ValueError("classification_threshold must be between 0 and 1 (exclusive)")
-        return value
-
-    @field_validator("ensemble_weight")
-    @classmethod
-    def _validate_ensemble_weight(cls, value: float) -> float:
-        if not 0.0 <= value <= 1.0:
-            raise ValueError("ensemble_weight must be between 0 and 1 (inclusive)")
         return value
 
     @model_validator(mode="after")

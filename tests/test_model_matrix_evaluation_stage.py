@@ -42,6 +42,7 @@ class ModelMatrixEvaluationStageIntegrationTests(unittest.TestCase):
             global_base = tmp_dir / "federated_global"
             local_checkpoint = local_base / "run_001" / "model.pt"
             global_checkpoint = global_base / "run_002" / "model.pt"
+            inclusive_ensemble_config_path = tmp_dir / "ensemble_inclusive_bank_1.toml"
             local_checkpoint.parent.mkdir(parents=True)
             global_checkpoint.parent.mkdir(parents=True)
             ModelArtifactWriter.write_model_checkpoint(
@@ -56,6 +57,17 @@ class ModelMatrixEvaluationStageIntegrationTests(unittest.TestCase):
                 model=model_factory(21),
                 model_config=model_config,
             )
+            inclusive_ensemble_config_path.write_text(
+                "stage = \"ensemble\"\n"
+                "experiment_name = \"ensemble_L1_Fincl\"\n"
+                f"output_dir = \"{(tmp_dir / 'ensemble_outputs').as_posix()}\"\n"
+                f"local_model_path = \"{local_checkpoint.as_posix()}\"\n"
+                f"federated_model_path = \"{global_checkpoint.as_posix()}\"\n"
+                f"dataset_path = \"{dataset_path.as_posix()}\"\n"
+                "ensemble_weight = 0.15\n"
+                "classification_threshold = 0.5\n",
+                encoding="utf-8",
+            )
 
             config_path = tmp_dir / "model_matrix.toml"
             config_path.write_text(
@@ -63,7 +75,6 @@ class ModelMatrixEvaluationStageIntegrationTests(unittest.TestCase):
                 "experiment_name = \"tmp_model_matrix\"\n"
                 f"output_dir = \"{(tmp_dir / 'outputs').as_posix()}\"\n"
                 "classification_threshold = 0.5\n"
-                "ensemble_weight = 0.5\n"
                 "exclusive_federated_models = []\n"
                 "exclusive_ensembles = []\n"
                 "\n"
@@ -84,7 +95,8 @@ class ModelMatrixEvaluationStageIntegrationTests(unittest.TestCase):
                 "[[inclusive_ensembles]]\n"
                 "model_id = \"ensemble_inclusive_bank_1\"\n"
                 "local_model_id = \"local_bank_1\"\n"
-                "federated_model_id = \"federated_global\"\n",
+                "federated_model_id = \"federated_global\"\n"
+                f"config_path = \"{inclusive_ensemble_config_path.as_posix()}\"\n",
                 encoding="utf-8",
             )
 
@@ -103,6 +115,16 @@ class ModelMatrixEvaluationStageIntegrationTests(unittest.TestCase):
             self.assertEqual(
                 {record["model_id"] for record in payload["results"]},
                 {"local_bank_1", "federated_global", "ensemble_inclusive_bank_1"},
+            )
+            ensemble_record = next(
+                record
+                for record in payload["results"]
+                if record["model_id"] == "ensemble_inclusive_bank_1"
+            )
+            self.assertEqual(ensemble_record["ensemble_weight"], 0.15)
+            self.assertEqual(
+                ensemble_record["ensemble_config_path"],
+                inclusive_ensemble_config_path.as_posix(),
             )
 
 
