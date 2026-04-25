@@ -5,15 +5,15 @@ classification_threshold = 0.5
 
 [[datasets]]
 dataset_id = "bank_1"
-path = "data/train_test_splits/bank_1_test.csv"
+path = "data/mixed_datasets/test/bank_1_dominant_33_33_33.csv"
 
 [[datasets]]
 dataset_id = "bank_2"
-path = "data/train_test_splits/bank_2_test.csv"
+path = "data/mixed_datasets/test/bank_2_dominant_33_33_33.csv"
 
 [[datasets]]
 dataset_id = "bank_3"
-path = "data/train_test_splits/bank_3_test.csv"
+path = "data/mixed_datasets/test/bank_3_dominant_33_33_33.csv"
 
 
 
