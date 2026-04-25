@@ -5,15 +5,15 @@ seed = 42
 
 [[institutions]]
 institution_id = "bank_1"
-dataset_path = "data/train_test_splits/bank_1_train.csv"
-sample_size = 26666
+dataset_path = "data/ensemble_validation_splits/bank_1_validation.csv"
+sample_size = 5333
 
 [[institutions]]
 institution_id = "bank_2"
-dataset_path = "data/train_test_splits/bank_2_train.csv"
-sample_size = 26666
+dataset_path = "data/ensemble_validation_splits/bank_2_validation.csv"
+sample_size = 5333
 
 [[institutions]]
 institution_id = "bank_3"
-dataset_path = "data/train_test_splits/bank_3_train.csv"
-sample_size = 26668
+dataset_path = "data/ensemble_validation_splits/bank_3_validation.csv"
+sample_size = 5334
