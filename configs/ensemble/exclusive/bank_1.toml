@@ -4,5 +4,5 @@ output_dir = "data/experiments"
 local_model_path = "data/experiments/local_bank_1_tabnet/model.pt"
 federated_model_path = "data/experiments/federated_banks_2_3/model.pt"
 dataset_path = "data/train_test_splits/bank_1_test.csv"
-ensemble_weight = 0.38
+ensemble_weight = 0.10
 classification_threshold = 0.5
