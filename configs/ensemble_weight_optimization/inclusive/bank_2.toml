@@ -1,12 +1,12 @@
 stage = "ensemble_weight_optimization"
 experiment_name = "hpo_ensemble_inclusive_bank_2"
-output_dir = "data/experiments"
+output_dir = "data/experiments/80_10_10"
 
 institution_id = "bank_2"
-dataset_path = "data/mixed_datasets/bank_2_dominant_33_33_33.csv"
+dataset_path = "data/mixed_datasets/train/bank_2_dominant_80_10_10.csv"
 
 n_trials = 100
-study_name = "hpo_ensemble_inclusive_bank_2"
+study_name = "hpo_ensemble_inclusive_bank_2_80_10_10"
 storage_url = "sqlite:///data/experiments/hpo_ensemble_inclusive_bank_2/optuna.db"
 load_if_exists = true
 objective_metric = "val_pr_auc"
