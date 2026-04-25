@@ -11,6 +11,8 @@ from typing import Tuple
 
 from domain.dataset.schema import ALL_COLUMNS, FEATURE_COLUMNS, TARGET_COLUMN
 
+DEFAULT_LOCAL_TRAINING_VALIDATION_FRACTION = 0.2
+
 
 @dataclass(frozen=True)
 class InstitutionDataset:
@@ -100,6 +102,18 @@ def split_dataset(
         )
 
     return _subset(train_indices), _subset(val_indices)
+
+
+def split_for_local_training(
+    dataset: InstitutionDataset,
+    seed: int,
+) -> Tuple[InstitutionDataset, InstitutionDataset]:
+    """Return the exact train/validation split used by the local training stage."""
+    return split_dataset(
+        dataset,
+        val_fraction=DEFAULT_LOCAL_TRAINING_VALIDATION_FRACTION,
+        seed=seed,
+    )
 
 
 def write_institution_dataset(dataset: InstitutionDataset, path: Path) -> None:

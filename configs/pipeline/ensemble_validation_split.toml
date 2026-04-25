@@ -1,0 +1,16 @@
+stage = "ensemble_validation_split"
+output_dir = "data/ensemble_validation_splits"
+validation_fraction = 0.2
+seed = 42
+
+[[institutions]]
+institution_id = "bank_1"
+dataset_path = "data/train_test_splits/bank_1_train.csv"
+
+[[institutions]]
+institution_id = "bank_2"
+dataset_path = "data/train_test_splits/bank_2_train.csv"
+
+[[institutions]]
+institution_id = "bank_3"
+dataset_path = "data/train_test_splits/bank_3_train.csv"

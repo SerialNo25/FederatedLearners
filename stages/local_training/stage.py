@@ -9,7 +9,7 @@ from time import perf_counter
 
 import torch
 
-from domain.dataset.dataset_loader import load_institution_dataset, split_dataset
+from domain.dataset.dataset_loader import load_institution_dataset, split_for_local_training
 from domain.federated.model_artifact_writer import ModelArtifactWriter
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import evaluate_institution
@@ -48,7 +48,7 @@ class LocalTrainingStage(Stage):
                 f"Institution dataset '{dataset.institution_id}' is empty; at least one row is required"
             )
 
-        train_dataset, val_dataset = split_dataset(dataset, seed=self.config.seed, val_fraction=0.2)
+        train_dataset, val_dataset = split_for_local_training(dataset, seed=self.config.seed)
         class_balance = compute_binary_class_balance(train_dataset.labels)
 
         self.experiment_logger.info(f"start_time={datetime.now(timezone.utc).isoformat()}")
