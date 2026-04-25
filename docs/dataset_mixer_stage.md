@@ -12,7 +12,7 @@ It follows the repository architecture:
 ## Default Run
 
 ```bash
-python main.py --config configs/dataset_mixer/bank_1_dominant.toml
+python main.py --config configs/dataset_mixer/80_10_10/train/bank_1_dominant.toml
 ```
 
 Helper script:
@@ -21,14 +21,44 @@ Helper script:
 ./scripts/run_dataset_mixer.sh
 ```
 
+Run the full config matrix:
+
+```bash
+./scripts/run_all_dataset_mixer.sh
+```
+
 ## Output
 
 The stage writes a mixed dataset CSV and a sidecar JSON summary under `data/mixed_datasets/`:
 
-- `bank_1_dominant_80_10_10.csv`
-- `bank_1_dominant_80_10_10.json`
+- `train/bank_1_dominant_80_10_10.csv`
+- `train/bank_1_dominant_80_10_10.json`
 
 Equivalent artifacts are produced for the other configs.
+
+## Config Matrix
+
+Dataset mixer configs live under:
+
+```text
+configs/dataset_mixer/<split>/<scenario>/bank_<n>_dominant.toml
+```
+
+The repository now includes four split families for both `train` and `test` scenarios:
+
+- `100_0_0`
+- `80_10_10`
+- `60_20_20`
+- `33_33_33`
+
+The scenario selects the corresponding source files from `data/train_test_splits/*_<scenario>.csv`.
+
+To keep every dominant-bank config feasible with the currently checked-in source datasets, totals are scenario-specific:
+
+- `train`: 80,000 total rows
+- `test`: 20,000 total rows
+
+`100_0_0` therefore requires zero-row source entries for the non-dominant institutions, which the stage now supports directly.
 
 ## Notes
 

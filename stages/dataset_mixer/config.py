@@ -16,8 +16,8 @@ class DatasetMixSourceConfig(BaseModel):
     @field_validator("sample_size")
     @classmethod
     def _validate_sample_size(cls, value: int) -> int:
-        if value <= 0:
-            raise ValueError("sample_size must be positive")
+        if value < 0:
+            raise ValueError("sample_size must be non-negative")
         return value
 
 

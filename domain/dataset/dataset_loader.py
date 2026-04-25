@@ -120,12 +120,25 @@ def sample_dataset_rows(
     seed: int,
 ) -> SampledInstitutionDataset:
     """Randomly sample rows without replacement from a validated institution dataset."""
-    if sample_size <= 0:
-        raise ValueError("sample_size must be positive")
+    if sample_size < 0:
+        raise ValueError("sample_size must be non-negative")
     if sample_size > len(dataset.labels):
         raise ValueError(
             f"{dataset.institution_id} requested {sample_size} rows, "
             f"but only {len(dataset.labels)} are available"
+        )
+
+    if sample_size == 0:
+        empty_dataset = InstitutionDataset(
+            institution_id=dataset.institution_id,
+            features=[],
+            labels=[],
+        )
+        return SampledInstitutionDataset(
+            dataset=empty_dataset,
+            requested_rows=0,
+            sampled_rows=0,
+            fraud_count=0,
         )
 
     rng = random.Random(seed)
