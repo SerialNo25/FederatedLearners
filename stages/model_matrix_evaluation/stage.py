@@ -7,11 +7,14 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import tomli
+
 from domain.dataset.dataset_loader import InstitutionDataset, load_institution_dataset
 from domain.evaluation_service import EvaluationCheckpointLoader, ModelEvaluationService
 from domain.logging.experiment_logger import StageExperimentLogger
 from domain.metrics.evaluation import InstitutionMetrics, evaluate_from_probabilities
 from domain.models.model_registry import MODEL_REGISTRY
+from stages.ensemble.config import EnsembleConfig
 from stages.model_matrix_evaluation.config import (
     CheckpointRunRef,
     EnsembleRunRef,
@@ -34,6 +37,7 @@ class ModelMatrixEvaluationStage(Stage):
         self.experiment_dir = experiment_dir
         self.checkpoint_loader = checkpoint_loader
         self.evaluation_service = evaluation_service
+        self._ensemble_weight_cache: dict[Path, float] = {}
 
     def execute(self) -> Path:
         self._write_run_state("running")
@@ -164,11 +168,7 @@ class ModelMatrixEvaluationStage(Stage):
         )
         local_probs = local_model.predict_proba(dataset.features)
         federated_probs = federated_model.predict_proba(dataset.features)
-        weight = (
-            ensemble_ref.ensemble_weight
-            if ensemble_ref.ensemble_weight is not None
-            else self.config.ensemble_weight
-        )
+        weight = self._ensemble_weight(ensemble_ref)
         probabilities = [
             weight * local_prob + (1.0 - weight) * federated_prob
             for local_prob, federated_prob in zip(local_probs, federated_probs)
@@ -213,12 +213,20 @@ class ModelMatrixEvaluationStage(Stage):
         if ensemble is not None:
             record["local_model_id"] = ensemble.local_model_id
             record["federated_model_id"] = ensemble.federated_model_id
-            record["ensemble_weight"] = (
-                ensemble.ensemble_weight
-                if ensemble.ensemble_weight is not None
-                else self.config.ensemble_weight
-            )
+            record["ensemble_weight"] = self._ensemble_weight(ensemble)
+            record["ensemble_config_path"] = str(ensemble.config_path)
         return record
+
+    def _ensemble_weight(self, ensemble_ref: EnsembleRunRef) -> float:
+        config_path = ensemble_ref.config_path
+        cached_weight = self._ensemble_weight_cache.get(config_path)
+        if cached_weight is not None:
+            return cached_weight
+
+        config_dict = tomli.loads(config_path.read_text(encoding="utf-8"))
+        ensemble_config = EnsembleConfig.from_dict(config_dict)
+        self._ensemble_weight_cache[config_path] = ensemble_config.ensemble_weight
+        return ensemble_config.ensemble_weight
 
     @staticmethod
     def _metrics_dict(metrics: InstitutionMetrics) -> dict[str, float]:
@@ -251,6 +259,7 @@ class ModelMatrixEvaluationStage(Stage):
             "local_model_id",
             "federated_model_id",
             "ensemble_weight",
+            "ensemble_config_path",
         ]
         with (self.experiment_dir / "evaluation_matrix.csv").open(
             "w",
@@ -280,6 +289,7 @@ class ModelMatrixEvaluationStage(Stage):
                         "local_model_id": result.get("local_model_id", ""),
                         "federated_model_id": result.get("federated_model_id", ""),
                         "ensemble_weight": result.get("ensemble_weight", ""),
+                        "ensemble_config_path": result.get("ensemble_config_path", ""),
                     }
                 )
 

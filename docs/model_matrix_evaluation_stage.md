@@ -46,5 +46,7 @@ checkpoint model IDs and combine probabilities as:
 ensemble = w * local + (1 - w) * federated
 ```
 
-Use the top-level `ensemble_weight` for all ensembles or add `ensemble_weight` to a
-specific ensemble entry to override it.
+Each ensemble entry points to its own config TOML under `configs/ensemble/`, and the
+stage loads `ensemble_weight` from that referenced config. This keeps matrix
+evaluation aligned with the per-ensemble weights used by the standalone ensemble
+stage.

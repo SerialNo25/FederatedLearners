@@ -27,6 +27,7 @@ class ModelMatrixEvaluationConfigTests(unittest.TestCase):
                         "model_id": "ensemble_inclusive_bank_1",
                         "local_model_id": "local_bank_1",
                         "federated_model_id": "federated_global",
+                        "config_path": "configs/ensemble/inclusive/bank_1.toml",
                     }
                 ],
             }
@@ -36,7 +37,10 @@ class ModelMatrixEvaluationConfigTests(unittest.TestCase):
             str(config.local_models[0].checkpoint_path),
             "data/experiments/local_bank_1_tabnet/run_028/model.pt",
         )
-        self.assertEqual(config.ensemble_weight, 0.5)
+        self.assertEqual(
+            config.inclusive_ensembles[0].config_path.as_posix(),
+            "configs/ensemble/inclusive/bank_1.toml",
+        )
         self.assertEqual(config.classification_threshold, 0.5)
 
     def test_unknown_ensemble_reference_is_rejected(self):
@@ -57,6 +61,7 @@ class ModelMatrixEvaluationConfigTests(unittest.TestCase):
                             "model_id": "ensemble_inclusive_bank_1",
                             "local_model_id": "missing_local",
                             "federated_model_id": "federated_global",
+                            "config_path": "configs/ensemble/inclusive/bank_1.toml",
                         }
                     ],
                 }

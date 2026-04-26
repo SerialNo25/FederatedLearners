@@ -2,19 +2,18 @@ stage = "model_matrix_evaluation"
 experiment_name = "model_matrix_evaluation"
 output_dir = "data/experiments"
 classification_threshold = 0.5
-ensemble_weight = 0.5
 
 [[datasets]]
 dataset_id = "bank_1"
-path = "data/train_test_splits/bank_1_test.csv"
+path = "data/mixed_datasets/test/bank_1_dominant_33_33_33.csv"
 
 [[datasets]]
 dataset_id = "bank_2"
-path = "data/train_test_splits/bank_2_test.csv"
+path = "data/mixed_datasets/test/bank_2_dominant_33_33_33.csv"
 
 [[datasets]]
 dataset_id = "bank_3"
-path = "data/train_test_splits/bank_3_test.csv"
+path = "data/mixed_datasets/test/bank_3_dominant_33_33_33.csv"
 
 
 
@@ -66,28 +65,34 @@ run_number = 1
 model_id = "ensemble_exclusive_bank_1"
 local_model_id = "local_bank_1"
 federated_model_id = "federated_exclusive_bank_1"
+config_path = "configs/ensemble/exclusive/bank_1.toml"
 
 [[exclusive_ensembles]]
 model_id = "ensemble_exclusive_bank_2"
 local_model_id = "local_bank_2"
 federated_model_id = "federated_exclusive_bank_2"
+config_path = "configs/ensemble/exclusive/bank_2.toml"
 
 [[exclusive_ensembles]]
 model_id = "ensemble_exclusive_bank_3"
 local_model_id = "local_bank_3"
 federated_model_id = "federated_exclusive_bank_3"
+config_path = "configs/ensemble/exclusive/bank_3.toml"
 
 [[inclusive_ensembles]]
 model_id = "ensemble_inclusive_bank_1"
 local_model_id = "local_bank_1"
 federated_model_id = "federated_global"
+config_path = "configs/ensemble/inclusive/bank_1.toml"
 
 [[inclusive_ensembles]]
 model_id = "ensemble_inclusive_bank_2"
 local_model_id = "local_bank_2"
 federated_model_id = "federated_global"
+config_path = "configs/ensemble/inclusive/bank_2.toml"
 
 [[inclusive_ensembles]]
 model_id = "ensemble_inclusive_bank_3"
 local_model_id = "local_bank_3"
 federated_model_id = "federated_global"
+config_path = "configs/ensemble/inclusive/bank_3.toml"

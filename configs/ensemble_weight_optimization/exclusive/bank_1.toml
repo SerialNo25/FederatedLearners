@@ -1,0 +1,30 @@
+stage = "ensemble_weight_optimization"
+experiment_name = "hpo_ensemble_exclusive_bank_1"
+output_dir = "data/experiments/33_33_33"
+
+institution_id = "bank_1"
+dataset_path = "data/mixed_datasets/train/bank_1_dominant_33_33_33.csv"
+
+n_trials = 100
+study_name = "hpo_ensemble_exclusive_bank_1_33_33_33"
+storage_url = "sqlite:///data/experiments/hpo_ensemble_exclusive_bank_1/optuna.db"
+load_if_exists = true
+objective_metric = "val_pr_auc"
+direction = "maximize"
+seed = 42
+classification_threshold = 0.5
+
+[local_model]
+model_id = "local_bank_1"
+base_path = "data/experiments/local_bank_1_tabnet"
+run_number = 28
+
+[federated_model]
+model_id = "federated_exclusive_bank_1"
+base_path = "data/experiments/federated_banks_2_3"
+run_number = 1
+
+[search_space.ensemble_weight]
+low = 0.0
+high = 1.0
+step = 0.01

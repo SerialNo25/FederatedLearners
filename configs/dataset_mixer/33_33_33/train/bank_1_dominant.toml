@@ -1,0 +1,19 @@
+stage = "dataset_mixer"
+output_path = "data/mixed_datasets/train/bank_1_dominant_33_33_33.csv"
+mixed_institution_id = "mixed_bank_1_dominant_33_33_33_train"
+seed = 42
+
+[[institutions]]
+institution_id = "bank_1"
+dataset_path = "data/ensemble_validation_splits/bank_1_validation.csv"
+sample_size = 5334
+
+[[institutions]]
+institution_id = "bank_2"
+dataset_path = "data/ensemble_validation_splits/bank_2_validation.csv"
+sample_size = 5333
+
+[[institutions]]
+institution_id = "bank_3"
+dataset_path = "data/ensemble_validation_splits/bank_3_validation.csv"
+sample_size = 5333
