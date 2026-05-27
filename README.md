@@ -68,13 +68,10 @@ Requirements:
 Create and activate an environment, then install the project dependencies:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e .
+uv sync
 ```
 
-If you use another environment manager, install the dependencies from `pyproject.toml`.
+`uv sync` creates and manages the local `.venv` from `pyproject.toml` and `uv.lock` when present.
 
 ## Data Setup
 
