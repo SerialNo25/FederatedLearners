@@ -24,6 +24,10 @@ class StageRoutingTests(unittest.TestCase):
         with self.assertRaises(KeyError):
             resolve_stage_runner("missing_stage")
 
+    def test_dataset_split_stage_has_been_retired(self):
+        with self.assertRaises(KeyError):
+            resolve_stage_runner("dataset_split")
+
     def test_runnable_configs_include_stage_parameter(self):
         runnable_configs = [
             path

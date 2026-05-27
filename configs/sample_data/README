@@ -1,7 +1,0 @@
-dataset links below: 
-
-B1: https://www.kaggle.com/datasets/kartik2112/fraud-detection/data
-B2: https://www.kaggle.com/datasets/saurabhbagchi/credit-card-fraud-detection
-B3: https://www.kaggle.com/datasets/sriharshaeedala/financial-fraud-detection-dataset
-
-Bank 3 is originally ~6m rows- we cut this down to fit on git.

@@ -63,7 +63,7 @@ class HyperparameterOptimizationStage(Stage):
         self.experiment_logger.info(f"config={json.dumps(self.config.to_dict(), indent=2)}")
         self.experiment_logger.info(f"local_institution={dataset.institution_id}")
         self.experiment_logger.info(
-            f"dataset_split train={len(train_dataset.features)} val={len(val_dataset.features)}"
+            f"validation_split train={len(train_dataset.features)} val={len(val_dataset.features)}"
         )
         self.experiment_logger.info(
             "train_class_balance "

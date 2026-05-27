@@ -1,6 +1,6 @@
-# Harmonized Split Data Stage
+# Harmonized Data Stage
 
-The `split_data` stage converts the raw bank-specific CSV files into the shared 21-feature fraud schema used by the rest of the pipeline.
+The `harmonized_data` stage converts the raw bank-specific CSV files into the shared 21-feature fraud schema used by the rest of the pipeline.
 It splits raw rows before fitting preprocessing statistics, then applies the train-fitted transforms to every subset.
 
 It follows the repository architecture:
