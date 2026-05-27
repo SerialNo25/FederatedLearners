@@ -1,178 +1,200 @@
-# FederatedLearners
+# FederatedLearners Experiment Codebase
 
-## Script Layout
+This codebase contains a modular experiment pipeline for evaluating redundancy of self-data inclusion in ensemble settings with federated fraud detection on tabular transaction data. It compares local bank models, inclusive federated models, exclusive federated models, and combinations of ensembles to estimate when federated knowledge adds value. It is the experiment implementation of the project of Team **Federated Learners** of the HSG FS2026 Deep Learning course.
+
+The project uses stage-based orchestration with Pydantic-validated TOML configs. The experiments are based on TabNet models running in PyTorch. Hyperparameter optimization uses Optuna. Generated datasets, checkpoints, metrics, and reports are written under `data/`.
+
+## Contents
+
+- [Experiment Design](#experiment-design)
+- [Repository Layout](#repository-layout)
+- [Installation](#installation)
+- [Data Setup](#data-setup)
+- [Running the Pipeline](#running-the-pipeline)
+- [Mixed Evaluation Protocol](#mixed-evaluation-protocol)
+- [Baselines and Monitoring](#baselines-and-monitoring)
+- [Outputs](#outputs)
+- [Documentation](#documentation)
+
+## Experiment Design
+
+The core comparison is:
+
+- `Lk`: a local model trained for bank `k`
+- `Fincl`: a federated model trained with all banks
+- `Fexcl`: a federated model trained without bank `k`
+- `Lk + Fexcl` and `Lk + Fincl`: weighted ensembles combining local and federated predictions
+
+This project uses our proposed Mixed evaluation protocol to measure how each model behaves when test data combines bank distributions. The default configured strategies are:
+
+- `33_33_33`
+- `60_20_20`
+- `80_10_10`
+- `100_0_0`
+
+Each strategy has dominant-bank train and test mixes for banks 1, 2, and 3 under `configs/dataset_mixer/`.
+
+## Repository Layout
+
+```text
+composition/      Composition roots that load configs and wire stage dependencies
+configs/          TOML configuration files for every stage
+domain/           Reusable ML, dataset, metrics, logging, and federated logic
+docs/             Stage-specific documentation
+scripts/          Workflow helper scripts
+stages/           Stage orchestration and stage-specific config models
+tests/            Unit and integration tests
+data/             Generated and local-only data, checkpoints, metrics, reports
+```
 
 Helper scripts are grouped by workflow:
 
-- `scripts/1_data_processing/` for harmonization and dataset mixing
-- `scripts/2_hpo/` for hyperparameter optimization
-- `scripts/3_training/` for local and federated training
-- `scripts/4_evaluation/` for evaluation and ensemble utilities
-- `scripts/analysis/` for dashboards and reports
+```text
+scripts/1_data_processing/
+scripts/2_hpo/
+scripts/3_training/
+scripts/4_evaluation/
+scripts/analysis/
+```
 
-## Run federated training
+## Installation
+
+Requirements:
+
+- Python 3.10+
+- A local virtual environment
+- Raw bank CSV files placed in `data/raw/`
+
+Create and activate an environment, then install the project dependencies:
 
 ```bash
-python main.py --config configs/federated/global.toml
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e .
 ```
 
-Helper scripts:
+If you use another environment manager, install the dependencies from `pyproject.toml`.
 
-```bash
-./scripts/3_training/run_federated_training.sh
-./scripts/3_training/run_federated_training_banks_1_2.sh
-./scripts/3_training/run_federated_training_banks_1_3.sh
-./scripts/3_training/run_federated_training_banks_2_3.sh
+## Data Setup
+
+Place the raw source files here:
+
+```text
+data/raw/Bank_A.csv
+data/raw/Bank_B.csv
+data/raw/Bank_C.csv
 ```
 
-The runnable config declares its stage:
+## Running the Pipeline
 
-```toml
-stage = "federated_training"
-```
+The full experiment pipeline is:
 
-See stage documentation:
+1. Harmonize raw data.
+2. Create ensemble validation splits.
+3. Create dataset mixes for the mixed evaluation strategies.
+4. Run HPO and update training configs with the selected hyperparameters.
+5. Train local and federated models.
 
-- `docs/harmonized_data_stage.md`
-- `docs/federated_training_stage.md`
-
-## Build harmonized datasets
-
-```bash
-python main.py --config configs/pipeline/harmonized_data.toml
-```
-
-Run this if you start from the raw bank CSV files in `data/raw/`. The stage now splits raw rows first,
-fits preprocessing statistics on each train subset only, and writes the harmonized train/test CSVs used
-by the training and evaluation configs.
-
-Helper script:
+Run the preparation stages:
 
 ```bash
 ./scripts/1_data_processing/run_harmonized_data.sh
+./scripts/4_evaluation/run_ensemble_validation_split.sh
+./scripts/1_data_processing/run_all_dataset_mixer.sh
 ```
 
-## Run local-only training
+Run local and federated HPO:
 
 ```bash
-python main.py --config configs/local_training/default.toml
-python main.py --config configs/local_training/bank_1.toml
-python main.py --config configs/local_training/bank_2.toml
-python main.py --config configs/local_training/bank_3.toml
+./scripts/2_hpo/run_all_hpo.sh
 ```
 
-Helper scripts:
+After reviewing the Optuna results, update the relevant training configs in `configs/local_training/` and `configs/federated/`.
+
+Train the configured models:
 
 ```bash
-./scripts/3_training/run_local_training.sh
-./scripts/3_training/run_local_training_bank_1.sh
-./scripts/3_training/run_local_training_bank_2.sh
-./scripts/3_training/run_local_training_bank_3.sh
+./scripts/3_training/run_all_training.sh
 ```
 
-The local stage reuses the same model configuration schema as federated training and can consume a federated-style TOML config while selecting one institution via `local_institution_id`.
+The training helper runs the three local models plus the inclusive and exclusive federated models.
 
-See stage documentation:
+## Mixed Evaluation Protocol
 
-- `docs/local_training_stage.md`
+For each mixed evaluation scenario (`33_33_33`, `60_20_20`, `80_10_10`, `100_0_0`), the intended evaluation flow is:
 
-## Run hyperparameter optimization
+1. Optimize ensemble parameters on the scenario-specific mixed train data.
+2. Write the selected ensemble weights into the corresponding `configs/ensemble/...` files.
+3. Run matrix evaluation on the scenario-specific mixed test data.
+
+Example of one ensemble-weight optimization config:
 
 ```bash
-python main.py --config configs/hyperparameter_optimization/bank_1.toml
-python main.py --config configs/hyperparameter_optimization/bank_2.toml
-python main.py --config configs/hyperparameter_optimization/bank_3.toml
+./scripts/4_evaluation/run_ensemble_weight_optimization.sh configs/ensemble_weight_optimization/exclusive/bank_1.toml
 ```
 
-Helper scripts:
+Run matrix evaluation:
 
 ```bash
-./scripts/2_hpo/run_hyperparameter_optimization_bank_1.sh
-./scripts/2_hpo/run_hyperparameter_optimization_bank_2.sh
-./scripts/2_hpo/run_hyperparameter_optimization_bank_3.sh
+./scripts/4_evaluation/run_model_matrix_evaluation.sh configs/model_matrix_evaluation/default.toml
 ```
 
-The bank Optuna studies write to:
+Current checked-in ensemble optimization and model-matrix configs are set up for `33_33_33`. To evaluate `60_20_20`, `80_10_10`, or `100_0_0`, create or update the ensemble optimization configs and matrix evaluation config so their dataset paths point at the matching files in `data/mixed_datasets/train/` and `data/mixed_datasets/test/`.
+
+## Baselines and Monitoring
+
+Random guessing is available as a baseline using the same evaluation metrics:
+
+```bash
+./scripts/4_evaluation/run_random_guessing_evaluation.sh
+```
+
+By default, it evaluates the bank 1 test split and uses the dataset fraud prevalence as the random positive probability. Pass `--help` to see configurable options.
+
+Training runs can be monitored with the dashboard stage:
+
+```bash
+./scripts/analysis/run_training_dashboard.sh
+```
+
+This reads experiment artifacts under `data/experiments/` and reports run status, metrics, and training progress.
+
+## Outputs
+
+Most stages write reproducible artifacts under `data/`, for example:
 
 ```text
-data/experiments/hpo_local_bank_1_tabnet/optuna.db
-data/experiments/hpo_local_bank_2_tabnet/optuna.db
-data/experiments/hpo_local_bank_3_tabnet/optuna.db
+data/train_test_splits/
+data/mixed_datasets/
+data/ensemble_validation_splits/
+data/experiments/<experiment_name>/run_NNN/
 ```
 
-Open the Optuna dashboard with:
+Experiment run directories typically contain:
 
-```bash
-optuna-dashboard sqlite:///data/experiments/hpo_local_bank_1_tabnet/optuna.db
-optuna-dashboard sqlite:///data/experiments/hpo_local_bank_2_tabnet/optuna.db
-optuna-dashboard sqlite:///data/experiments/hpo_local_bank_3_tabnet/optuna.db
+```text
+config.json
+train.log
+metrics.jsonl
+model.pt
+run_state.json
 ```
 
-See stage documentation:
+Evaluation stages additionally write JSON/CSV summaries such as `evaluation.json`, `evaluation_matrix.json`, and `evaluation_matrix.csv`.
 
+## Documentation
+
+Stage-specific details live in `docs/`:
+
+- `docs/harmonized_data_stage.md`
+- `docs/dataset_mixer_stage.md`
+- `docs/ensemble_validation_split_stage.md`
 - `docs/hyperparameter_optimization_stage.md`
-
-## Run federated hyperparameter optimization
-
-```bash
-python main.py --config configs/federated_hyperparameter_optimization/global.toml
-python main.py --config configs/federated_hyperparameter_optimization/banks_1_2.toml
-python main.py --config configs/federated_hyperparameter_optimization/banks_1_3.toml
-python main.py --config configs/federated_hyperparameter_optimization/banks_2_3.toml
-```
-
-Helper scripts:
-
-```bash
-./scripts/2_hpo/run_federated_hyperparameter_optimization.sh
-./scripts/2_hpo/run_federated_hyperparameter_optimization_banks_1_2.sh
-./scripts/2_hpo/run_federated_hyperparameter_optimization_banks_1_3.sh
-./scripts/2_hpo/run_federated_hyperparameter_optimization_banks_2_3.sh
-```
-
-The exclusive `banks_x_y` studies write separate Optuna databases and experiment results:
-
-```text
-data/experiments/hpo_federated_banks_1_2_tabnet/optuna.db
-data/experiments/hpo_federated_banks_1_3_tabnet/optuna.db
-data/experiments/hpo_federated_banks_2_3_tabnet/optuna.db
-```
-
-Open the Optuna dashboard with:
-
-```bash
-optuna-dashboard sqlite:///data/experiments/hpo_federated_global_tabnet/optuna.db
-optuna-dashboard sqlite:///data/experiments/hpo_federated_banks_1_2_tabnet/optuna.db
-optuna-dashboard sqlite:///data/experiments/hpo_federated_banks_1_3_tabnet/optuna.db
-optuna-dashboard sqlite:///data/experiments/hpo_federated_banks_2_3_tabnet/optuna.db
-```
-
-See stage documentation:
-
 - `docs/federated_hyperparameter_optimization_stage.md`
-
-## Run evaluation
-
-```bash
-python main.py --config configs/evaluation/default.toml
-```
-
-Helper script:
-
-```bash
-./scripts/4_evaluation/run_evaluation.sh
-```
-
-The evaluation stage loads a persisted `model.pt` file and a dataset CSV, then reports `loss`, `accuracy`, `precision`, `recall`, `f1`, and `pr_auc`.
-
-See stage documentation:
-
+- `docs/local_training_stage.md`
+- `docs/federated_training_stage.md`
+- `docs/ensemble_weight_optimization_stage.md`
+- `docs/model_matrix_evaluation_stage.md`
 - `docs/evaluation_stage.md`
-
-## Model options
-
-The repository now includes an alternative TabNet-based model implementation in:
-
-- `domain/models/tabnet_model.py`
-
-This can be used when you want a nonlinear architecture instead of the baseline logistic model in `domain/models/basic_model.py`.
+- `docs/training_dashboard_stage.md`
