@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from domain.dataset.schema import FEATURE_COLUMNS, TARGET_COLUMN
-from scripts.run_random_guessing_evaluation import run_random_guessing_evaluation
+from scripts.evaluation.run_random_guessing_evaluation import run_random_guessing_evaluation
 
 
 class RandomGuessingEvaluationScriptTests(unittest.TestCase):

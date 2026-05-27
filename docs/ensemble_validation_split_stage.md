@@ -21,7 +21,7 @@ python main.py --config configs/pipeline/ensemble_validation_split.toml
 Helper script:
 
 ```bash
-./scripts/run_ensemble_validation_split.sh
+./scripts/evaluation/run_ensemble_validation_split.sh
 ```
 
 ## Output

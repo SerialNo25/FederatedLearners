@@ -37,7 +37,7 @@ python main.py federated_hyperparameter_optimization --config configs/federated_
 Helper script:
 
 ```bash
-./scripts/run_federated_hyperparameter_optimization.sh
+./scripts/hpo/run_federated_hyperparameter_optimization.sh
 ```
 
 ## Run Exclusive Optimization
@@ -55,9 +55,9 @@ python main.py --config configs/federated_hyperparameter_optimization/banks_2_3.
 Helper scripts:
 
 ```bash
-./scripts/run_federated_hyperparameter_optimization_banks_1_2.sh
-./scripts/run_federated_hyperparameter_optimization_banks_1_3.sh
-./scripts/run_federated_hyperparameter_optimization_banks_2_3.sh
+./scripts/hpo/run_federated_hyperparameter_optimization_banks_1_2.sh
+./scripts/hpo/run_federated_hyperparameter_optimization_banks_1_3.sh
+./scripts/hpo/run_federated_hyperparameter_optimization_banks_2_3.sh
 ```
 
 Open the Optuna dashboard with:

@@ -6,13 +6,13 @@ configured dataset.
 Default execution:
 
 ```bash
-scripts/run_model_matrix_evaluation.sh
+scripts/evaluation/run_model_matrix_evaluation.sh
 ```
 
 Custom config execution:
 
 ```bash
-scripts/run_model_matrix_evaluation.sh configs/model_matrix_evaluation/default.toml
+scripts/evaluation/run_model_matrix_evaluation.sh configs/model_matrix_evaluation/default.toml
 ```
 
 The config stores a base experiment path and a run number for each checkpoint model.
