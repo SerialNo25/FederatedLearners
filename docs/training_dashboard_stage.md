@@ -49,7 +49,7 @@ http://127.0.0.1:8765
 Start the dashboard in one terminal, then start local training in another terminal:
 
 ```bash
-./scripts/training/run_local_training_bank_1.sh
+./scripts/3_training/run_local_training_bank_1.sh
 ```
 
 ## Local Live Metrics

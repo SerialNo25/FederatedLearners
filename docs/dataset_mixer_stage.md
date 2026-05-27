@@ -18,13 +18,13 @@ python main.py --config configs/dataset_mixer/80_10_10/train/bank_1_dominant.tom
 Helper script:
 
 ```bash
-./scripts/data_processing/run_dataset_mixer.sh
+./scripts/1_data_processing/run_dataset_mixer.sh
 ```
 
 Run the full config matrix:
 
 ```bash
-./scripts/data_processing/run_all_dataset_mixer.sh
+./scripts/1_data_processing/run_all_dataset_mixer.sh
 ```
 
 ## Output

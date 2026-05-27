@@ -15,4 +15,4 @@ if [[ -z "$PYTHON_BIN" ]]; then
   fi
 fi
 
-"$PYTHON_BIN" scripts/evaluation/run_random_guessing_evaluation.py "$@"
+"$PYTHON_BIN" scripts/4_evaluation/run_random_guessing_evaluation.py "$@"

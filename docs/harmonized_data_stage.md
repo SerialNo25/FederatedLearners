@@ -19,7 +19,7 @@ python main.py --config configs/pipeline/harmonized_data.toml
 Helper script:
 
 ```bash
-./scripts/data_processing/run_harmonized_data.sh
+./scripts/1_data_processing/run_harmonized_data.sh
 ```
 
 ## Output
