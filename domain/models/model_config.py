@@ -9,10 +9,6 @@ from pydantic import BaseModel, Field, field_validator
 from domain.models.model_registry import MODEL_REGISTRY
 
 
-class LogisticRegressionModelConfig(BaseModel):
-    model_type: Literal["logistic_regression"]
-
-
 class TabNetModelConfig(BaseModel):
     model_type: Literal["tabnet"]
     decision_dim: int = 16
@@ -37,7 +33,7 @@ class TabNetModelConfig(BaseModel):
 
 
 ModelConfig = Annotated[
-    LogisticRegressionModelConfig | TabNetModelConfig,
+    TabNetModelConfig,
     Field(discriminator="model_type"),
 ]
 

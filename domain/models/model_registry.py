@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Protocol, TypeAlias, TypedDict
+from typing import Protocol, TypedDict
 
 from domain.models.device_selector import DeviceSelector
 from domain.models.federated_model_protocol import FederatedModelProtocol
-
-
-class LogisticRegressionModelOptions(TypedDict):
-    model_type: str
 
 
 class TabNetModelOptions(TypedDict):
@@ -22,7 +18,7 @@ class TabNetModelOptions(TypedDict):
     sparsity_weight: float
 
 
-ModelOptions: TypeAlias = LogisticRegressionModelOptions | TabNetModelOptions
+ModelOptions = TabNetModelOptions
 
 
 class ModelBuilderProtocol(Protocol):
