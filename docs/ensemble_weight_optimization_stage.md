@@ -6,13 +6,13 @@ The ensemble weight optimization stage runs Optuna over a single parameter:
 Default execution:
 
 ```bash
-scripts/run_ensemble_weight_optimization.sh
+scripts/4_evaluation/run_ensemble_weight_optimization.sh
 ```
 
 Custom config execution:
 
 ```bash
-scripts/run_ensemble_weight_optimization.sh configs/ensemble_weight_optimization/exclusive/bank_2.toml
+scripts/4_evaluation/run_ensemble_weight_optimization.sh configs/ensemble_weight_optimization/exclusive/bank_2.toml
 ```
 
 The config uses the same checkpoint reference pattern as `model_matrix_evaluation`:

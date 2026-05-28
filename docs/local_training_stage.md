@@ -24,10 +24,10 @@ python main.py local_training --config configs/local_training/default.toml
 Helper scripts:
 
 ```bash
-./scripts/run_local_training.sh
-./scripts/run_local_training_bank_1.sh
-./scripts/run_local_training_bank_2.sh
-./scripts/run_local_training_bank_3.sh
+./scripts/3_training/run_local_training.sh
+./scripts/3_training/run_local_training_bank_1.sh
+./scripts/3_training/run_local_training_bank_2.sh
+./scripts/3_training/run_local_training_bank_3.sh
 ```
 
 The `bank_1`, `bank_2`, and `bank_3` config files each set a distinct `experiment_name`, so artifacts are written into separate experiment folders under `data/experiments/`.

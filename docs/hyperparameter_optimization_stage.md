@@ -36,9 +36,9 @@ python main.py hyperparameter_optimization --config configs/hyperparameter_optim
 Helper script:
 
 ```bash
-./scripts/run_hyperparameter_optimization_bank_1.sh
-./scripts/run_hyperparameter_optimization_bank_2.sh
-./scripts/run_hyperparameter_optimization_bank_3.sh
+./scripts/2_hpo/run_hyperparameter_optimization_bank_1.sh
+./scripts/2_hpo/run_hyperparameter_optimization_bank_2.sh
+./scripts/2_hpo/run_hyperparameter_optimization_bank_3.sh
 ```
 
 Open the Optuna dashboard with:

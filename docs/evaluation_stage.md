@@ -18,7 +18,7 @@ python main.py --config configs/evaluation/default.toml
 or:
 
 ```bash
-./scripts/run_evaluation.sh
+./scripts/4_evaluation/run_evaluation.sh
 ```
 
 ## Config

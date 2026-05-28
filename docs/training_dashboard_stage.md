@@ -37,7 +37,7 @@ python main.py --config configs/training_dashboard/local.toml
 Helper script:
 
 ```bash
-./scripts/run_training_dashboard.sh
+./scripts/analysis/run_training_dashboard.sh
 ```
 
 The default dashboard listens on:
@@ -49,7 +49,7 @@ http://127.0.0.1:8765
 Start the dashboard in one terminal, then start local training in another terminal:
 
 ```bash
-./scripts/run_local_training_bank_1.sh
+./scripts/3_training/run_local_training_bank_1.sh
 ```
 
 ## Local Live Metrics

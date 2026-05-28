@@ -79,10 +79,10 @@ python main.py --config configs/federated/global.toml
 
 Or via helper scripts:
 ```bash
-./scripts/run_federated_training.sh
-./scripts/run_federated_training_banks_1_2.sh
-./scripts/run_federated_training_banks_1_3.sh
-./scripts/run_federated_training_banks_2_3.sh
+./scripts/3_training/run_federated_training.sh
+./scripts/3_training/run_federated_training_banks_1_2.sh
+./scripts/3_training/run_federated_training_banks_1_3.sh
+./scripts/3_training/run_federated_training_banks_2_3.sh
 ```
 
 You may keep the stage name as a CLI guard if desired:
